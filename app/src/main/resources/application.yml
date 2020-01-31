@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/four_player_chess
+    username: admin
+    password: admin
+    initialization-mode: always
