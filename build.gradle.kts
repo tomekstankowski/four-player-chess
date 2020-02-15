@@ -14,6 +14,7 @@ allprojects {
     repositories {
         mavenCentral()
         jcenter()
+        maven { setUrl("https://dl.bintray.com/hotkeytlt/maven") }
     }
 
     dependencies {
