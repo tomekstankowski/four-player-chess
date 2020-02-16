@@ -91,7 +91,7 @@ data class Position internal constructor(val file: Int, val rank: Int) {
 
 }
 
-typealias EnPassantSquares = Map<Color, Position?>
+typealias EnPassantSquares = Map<Color, Position>
 
 sealed class Square {
     data class Occupied internal constructor(val piece: Piece) : Square() {
@@ -172,7 +172,7 @@ data class State(
                                 listOf(emptySquare(), emptySquare(), emptySquare(), squareOf(Yellow, Rook), squareOf(Yellow, Knight), squareOf(Yellow, Bishop), squareOf(Yellow, King), squareOf(Yellow, Queen), squareOf(Yellow, Bishop), squareOf(Yellow, Knight), squareOf(Yellow, Rook), emptySquare(), emptySquare(), emptySquare())
                         ),
                         nextMoveColor = Red,
-                        enPassantSquares = Color.values().map { color -> color to null }.toMap(),
+                        enPassantSquares = emptyMap(),
                         colorToCastlingOptions = CastlingOptions.default(),
                         plyCount = PlyCount.of(0)
                 )
