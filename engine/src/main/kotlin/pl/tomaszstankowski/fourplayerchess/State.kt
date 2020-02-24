@@ -1,8 +1,12 @@
 package pl.tomaszstankowski.fourplayerchess
 
+import com.github.h0tk3y.betterParse.combinators.and
+import com.github.h0tk3y.betterParse.combinators.map
+import com.github.h0tk3y.betterParse.grammar.Grammar
 import com.github.h0tk3y.betterParse.grammar.tryParseToEnd
 import com.github.h0tk3y.betterParse.parser.ErrorResult
 import com.github.h0tk3y.betterParse.parser.Parsed
+import com.github.h0tk3y.betterParse.parser.Parser
 import pl.tomaszstankowski.fourplayerchess.Castling.KingSide
 import pl.tomaszstankowski.fourplayerchess.Castling.QueenSide
 import pl.tomaszstankowski.fourplayerchess.Color.*
@@ -51,6 +55,7 @@ data class Position internal constructor(val file: Int, val rank: Int) {
 
     companion object {
         private val availablePositions: Array<Array<Position?>> = Array(BOARD_SIZE) { arrayOfNulls<Position?>(BOARD_SIZE) }
+        val allPositions: List<Position>
 
         init {
             for (file in 0 until BOARD_SIZE)
@@ -59,6 +64,7 @@ data class Position internal constructor(val file: Int, val rank: Int) {
             for (file in DISABLED_AREA_SIZE until BOARD_SIZE - DISABLED_AREA_SIZE)
                 for (rank in 0 until BOARD_SIZE)
                     availablePositions[file][rank] = Position(file, rank)
+            allPositions = availablePositions.flatten().filterNotNull()
         }
 
         private fun ofFileAndRankOrNull(file: Int, rank: Int): Position? {
@@ -72,18 +78,41 @@ data class Position internal constructor(val file: Int, val rank: Int) {
 
         private fun illegalPositionException(file: Int, rank: Int) =
                 IllegalArgumentException("Position ($file,$rank) is out of board")
+
+        fun parse(str: String): Position =
+                when (val result = PositionGrammar.tryParseToEnd(str)) {
+                    is Parsed -> result.value
+                    else -> throw IllegalArgumentException("Invalid position string: $result")
+                }
+
+        private object PositionGrammar : Grammar<Position>() {
+            private val file by token("[a-n]")
+            private val rank by token("1[0-4]|[1-9]")
+
+            private val pFile by file map { tokenMatch -> tokenMatch.text[0] - 'a' }
+            private val pRank by rank map { tokenMatch -> tokenMatch.text.toInt().dec() }
+
+            override val rootParser: Parser<Position>
+                get() = pFile and pRank map { (file, rank) -> ofFileAndRank(file, rank) }
+        }
     }
 
-    internal fun offset(fileOffset: Int = 0, rankOffset: Int = 0): Position =
+    fun offset(fileOffset: Int = 0, rankOffset: Int = 0): Position =
             offsetOrNull(fileOffset, rankOffset) ?: throw illegalPositionException(fileOffset, rankOffset)
 
-    private fun offsetOrNull(fileOffset: Int = 0, rankOffset: Int = 0): Position? {
+    fun offsetOrNull(fileOffset: Int = 0, rankOffset: Int = 0): Position? {
         val newFile = file + fileOffset
         val newRank = rank + rankOffset
         if (newFile in 0 until BOARD_SIZE && newRank in 0 until BOARD_SIZE)
             return availablePositions[newFile][newRank]
         return null
     }
+
+    fun offsetOrNull(vector: Pair<Int, Int>): Position? {
+        val (fileOffset, rankOffset) = vector
+        return offsetOrNull(fileOffset, rankOffset)
+    }
+
 
     override fun toString() = "($file,$rank)"
 
@@ -111,6 +140,9 @@ fun emptySquare() = Square.Empty
 typealias Row = List<Square>
 
 typealias Board = List<Row>
+
+fun Board.getSquareByPosition(position: Position): Square =
+        this[position.rank][position.file]
 
 data class PlyCount internal constructor(val count: Int) {
 
