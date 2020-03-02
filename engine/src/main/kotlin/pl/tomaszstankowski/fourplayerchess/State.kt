@@ -108,6 +108,9 @@ data class Position internal constructor(val file: Int, val rank: Int) {
         return null
     }
 
+    fun offset(vector: Pair<Int, Int>): Position =
+            offsetOrNull(vector) ?: throw illegalPositionException(vector.first, vector.second)
+
     fun offsetOrNull(vector: Pair<Int, Int>): Position? {
         val (fileOffset, rankOffset) = vector
         return offsetOrNull(fileOffset, rankOffset)
