@@ -8,11 +8,10 @@ import java.time.Instant
 import java.util.*
 
 class LobbyService internal constructor(
-    private val clock: Clock,
-    private val idGenerator: IdGenerator,
-    private val lobbyRepository: LobbyRepository,
-    private val transactionExecutor: TransactionExecutor,
-    private val lobbyDetailsValidator: LobbyDetailsValidator
+        private val clock: Clock,
+        private val idGenerator: IdGenerator,
+        private val lobbyRepository: LobbyRepository,
+        private val transactionExecutor: TransactionExecutor
 ) {
 
     companion object {
@@ -26,14 +25,13 @@ class LobbyService internal constructor(
                 clock = clock,
                 idGenerator = idGenerator,
                 lobbyRepository = lobbyRepository,
-                transactionExecutor = transactionExecutor,
-                lobbyDetailsValidator = LobbyDetailsValidator()
+                    transactionExecutor = transactionExecutor
             )
     }
 
     fun createLobby(cmd: CreateLobbyCommand): CreateLobbyResult {
         val details = cmd.lobbyDetails
-        val validationErrors = lobbyDetailsValidator.validate(details)
+        val validationErrors = validate(details)
         if (validationErrors.isNotEmpty()) {
             return CreateLobbyResult.LobbyDetailsNotValid(validationErrors)
         }
@@ -54,7 +52,7 @@ class LobbyService internal constructor(
 
     fun updateLobby(cmd: UpdateLobbyCommand): UpdateLobbyResult {
         val details = cmd.lobbyDetails
-        val validationErrors = lobbyDetailsValidator.validate(details)
+        val validationErrors = validate(details)
         if (validationErrors.isNotEmpty()) {
             return UpdateLobbyResult.LobbyDetailsNotValid(validationErrors)
         }
