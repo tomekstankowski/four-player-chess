@@ -826,6 +826,32 @@ class MoveValidationTest : Spek({
             )
         }
 
+        test("cannot castle while checked") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-16-
+            3,yR,1,yB,yK,yQ,yB,1,yR,3/
+            4,yP,yP,yP,yP,yP,yP,yP,3/
+            5,yN,2,yN,5/
+            bR,1,yP,9,gP,gR/
+            1,bP,10,gP,gN/
+            bB,bP,bN,9,gP,gB/
+            bK,bP,8,gP,3/
+            bQ,bP,10,gP,gK/
+            bB,bP,bN,9,gP,gB/
+            1,bP,9,gQ,gP,gN/
+            bR,1,bP,8,gP,1,gR/
+            6,rB,rP,rP,5/
+            3,rP,rP,rP,rP,rN,1,rP,rP,3/
+            3,rR,rN,rB,rQ,rK,2,rR,3
+        """.trimIndent())
+
+            val validMoves = getValidMoves(state)
+
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("i1"))
+            )
+        }
+
         test("can castle king side") {
             val state = parseStateFromFenOrThrow("""
             R-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-12-

@@ -261,8 +261,10 @@ private fun getValidKingMoves(position: Position, state: State): List<Move> {
             .filter { c -> c != color }
             .map { c -> getControlledPositions(c, state) }
             .flatten()
+    val isChecked = positionsControlledByOtherColors.contains(position)
     val kingSideVector = color.kingSideBaseVector
     val castleKingSide = position.offsetOrNull(kingSideVector)
+            ?.takeIf { !isChecked }
             ?.takeIf { state.colorToCastlingOptions[color].contains(Castling.KingSide) }
             ?.takeIf { newRookPosition ->
                 state.squares.getSquareByPosition(newRookPosition) == Square.Empty
@@ -276,6 +278,7 @@ private fun getValidKingMoves(position: Position, state: State): List<Move> {
             ?.let { newPos -> Move.Castling.KingSide(from = position, to = newPos) }
     val queenSideVector = color.queenSideBaseVector
     val castleQueenSide = position.offsetOrNull(queenSideVector)
+            ?.takeIf { !isChecked }
             ?.takeIf { state.colorToCastlingOptions[color].contains(Castling.QueenSide) }
             ?.takeIf { newRookPosition ->
                 state.squares.getSquareByPosition(newRookPosition) == Square.Empty
