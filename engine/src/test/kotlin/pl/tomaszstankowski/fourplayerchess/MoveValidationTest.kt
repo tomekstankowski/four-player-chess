@@ -286,8 +286,8 @@ class MoveValidationTest : Spek({
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("g3"), to = Position.parse("g4")),
-                    Move.Capture(from = Position.parse("g3"), to = Position.parse("f4")),
-                    Move.Capture(from = Position.parse("g3"), to = Position.parse("h4"))
+                    Move.Capture(from = Position.parse("g3"), to = Position.parse("h4")),
+                    Move.Capture(from = Position.parse("g3"), to = Position.parse("f4"))
             )
         }
 
@@ -555,7 +555,7 @@ class MoveValidationTest : Spek({
 
     group("king") {
 
-        test("can go to every adjacent square") {
+        test("can go to every adjacent square if not controlled by piece of other color") {
             val state = parseStateFromFenOrThrow("""
             R-0,0,0,0-0,0,0,0-0,0,0,0-0,0,0,0-41-
             9,yK,4/
@@ -594,7 +594,7 @@ class MoveValidationTest : Spek({
             9,yK,4/
             7,yP,yP,yP,yP,3/
             3,yB,4,yN,5/
-            1,bP,3,yP,yP,2,gB,4/
+            1,bP,3,yP,yP,6,gB/
             bK,bP,10,gP,gN/
             bB,13/
             14/
@@ -612,9 +612,7 @@ class MoveValidationTest : Spek({
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("e2"), to = Position.parse("e3")),
                     Move.ToEmptySquare(from = Position.parse("e2"), to = Position.parse("f3")),
-                    Move.ToEmptySquare(from = Position.parse("e2"), to = Position.parse("f2")),
                     Move.ToEmptySquare(from = Position.parse("e2"), to = Position.parse("f1")),
-                    Move.ToEmptySquare(from = Position.parse("e2"), to = Position.parse("e1")),
                     Move.ToEmptySquare(from = Position.parse("e2"), to = Position.parse("d1")),
                     Move.ToEmptySquare(from = Position.parse("e2"), to = Position.parse("d2")),
                     Move.Capture(from = Position.parse("e2"), to = Position.parse("d3"))
@@ -648,23 +646,150 @@ class MoveValidationTest : Spek({
             )
         }
 
-        test("cannot castle when any square between king and rook is occupied") {
+        test("cannot castle king side when rook destination square is controlled by piece of other color") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-16-
+            3,yR,1,yB,yK,yQ,yB,1,yR,3/
+            4,yP,yP,yP,yP,yP,yP,4/
+            3,yP,1,yN,2,yN,1,yP,3/
+            bR,1,bP,8,gP,1,gR/
+            bN,bP,10,gP,1/
+            bB,1,bP,8,gN,gP,gB/
+            bK,1,bP,9,gP,gQ/
+            bQ,bP,10,gP,gK/
+            bB,bP,9,gN,gP,gB/
+            1,bP,10,gP,1/
+            bR,bP,bN,8,gP,1,gR/
+            7,rP,rN,rP,4/
+            3,rP,rP,rP,rP,1,rP,rB,rP,3/
+            3,rR,rN,rB,rQ,rK,2,rR,3
+        """.trimIndent())
+
+            val validMoves = getValidMoves(state)
+
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf()
+        }
+
+        test("cannot castle king side when king destination square is controlled by piece of other color") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-16-
+            3,yR,1,yB,yK,yQ,yB,1,yR,3/
+            4,yP,yP,yP,yP,yP,yP,4/
+            3,yP,1,yN,2,yN,1,gP,3/
+            bR,1,bP,10,gR/
+            bN,bP,10,gP,1/
+            bB,bP,9,gN,gP,gB/
+            bK,bP,bB,9,gP,gQ/
+            bQ,1,bP,9,gP,gK/
+            1,bP,9,gN,gP,gB/
+            bN,bP,10,gP,1/
+            bR,1,bP,4,rP,4,gP,gR/
+            6,rB,1,rP,5/
+            3,rP,rP,rP,rP,rN,1,rP,rP,3/
+            3,rR,rN,rB,rQ,rK,2,rR,3
+        """.trimIndent())
+
+            val validMoves = getValidMoves(state)
+
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("i1"))
+            )
+        }
+
+        test("cannot castle queen side when rook destination square is controlled by piece of other color") {
             val state = parseStateFromFenOrThrow("""
             R-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-20-
             3,yR,1,yB,yK,yQ,yB,1,yR,3/
-            4,yP,yP,1,yP,yP,yP,yP,3/
-            5,yN,yP,1,yN,5/
-            bR,1,yP,8,gP,1,gR/
-            1,bP,9,gP,2/
+            5,yP,yP,yP,yP,yP,4/
+            4,yP,yN,2,yN,1,gP,3/
+            bR,2,bP,9,gR/
+            11,gP,2/
             bB,bP,bN,8,gN,gP,gB/
-            bK,1,bP,9,gP,gQ/
+            bK,bP,10,gP,gQ/
+            bQ,bP,9,gP,1,gK/
+            bB,1,bP,8,gN,gP,gB/
+            1,bP,10,gP,1/
+            bR,bP,bN,9,gP,gR/
+            3,rN,1,rP,rP,rP,6/
+            3,rP,rP,1,rB,rQ,rP,rP,rP,3/
+            3,rR,3,rK,rB,rN,rR,3
+        """.trimIndent())
+
+            val validMoves = getValidMoves(state)
+
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf()
+        }
+
+        test("cannot castle queen side when king destination square is controlled by piece of other color") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-20-
+            3,yR,1,yB,yK,yQ,yB,1,yR,3/
+            4,yP,yP,yP,yP,yP,gP,4/
+            5,yN,2,yN,5/
+            bR,1,yP,10,gR/
+            2,bP,9,gP,1/
+            bB,bP,9,gN,gP,gB/
+            bK,bP,bN,9,gP,gQ/
             bQ,bP,10,gP,gK/
             bB,bP,bN,8,gN,gP,gB/
-            1,bP,9,gP,2/
-            bR,1,bP,9,gP,gR/
-            4,rP,1,rP,1,rN,5/
-            3,rP,rB,rP,rQ,rP,rP,rP,rP,3/
-            3,rR,rN,2,rK,rB,1,rR,3
+            2,bP,9,gP,1/
+            bR,bP,4,rP,5,gP,gR/
+            4,rP,rN,rQ,7/
+            3,rP,1,rP,rB,rP,rP,rP,rP,3/
+            3,rR,3,rK,rB,rN,rR,3
+        """.trimIndent())
+
+            val validMoves = getValidMoves(state)
+
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("g1"))
+            )
+        }
+
+        test("can castle queen side when knight square is controlled by piece of other color") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-20-
+            3,yR,1,yB,yK,yQ,yB,1,yR,3/
+            4,yP,yP,yP,yP,yP,yP,yP,3/
+            3,yN,4,yN,5/
+            bR,10,gP,1,gR/
+            2,bP,9,gP,gN/
+            bB,bP,bN,9,gP,gB/
+            bK,bP,9,gB,gP,gQ/
+            bQ,bP,9,gP,1,gK/
+            bB,bP,bN,8,gN,gP,1/
+            1,bP,10,gP,1/
+            bR,bP,4,rP,5,gP,gR/
+            3,rN,1,rP,1,rB,6/
+            3,rP,rP,1,rQ,rP,rP,rP,rP,3/
+            3,rR,3,rK,rB,rN,rR,3
+        """.trimIndent())
+
+            val validMoves = getValidMoves(state)
+
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("g1")),
+                    Move.Castling.QueenSide(from = Position.parse("h1"), to = Position.parse("f1"))
+            )
+        }
+
+        test("cannot castle when any square between king and rook is occupied") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-20-
+            3,yR,yN,yB,yK,1,yB,yN,yR,3/
+            3,yP,yP,yP,1,yP,yP,yP,yP,3/
+            5,yQ,yP,7/
+            bR,bP,10,gP,gR/
+            bN,bP,10,gP,gN/
+            bB,bP,10,gP,gB/
+            bK,bP,10,gP,gQ/
+            bQ,bP,10,gP,gK/
+            bB,bP,10,gP,gB/
+            bN,bP,10,gP,gN/
+            bR,bP,10,gP,gR/
+            3,rN,rP,2,rP,6/
+            3,rP,rP,1,rP,rQ,rP,rP,rP,3/
+            3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
 
             val validMoves = getValidMoves(state)
@@ -758,7 +883,7 @@ class MoveValidationTest : Spek({
 
         test("can castle both king and queen side") {
             val state = parseStateFromFenOrThrow("""
-            R-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-20-
+            R-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-28-
             3,yR,1,yB,yK,yQ,yB,1,yR,3/
             5,yP,2,yP,1,yP,3/
             3,yP,yP,yN,yP,yP,yN,yP,4/
@@ -790,7 +915,7 @@ class MoveValidationTest : Spek({
 private fun parseStateFromFenOrThrow(input: String): State =
         (State.parseFromFen(input) as ParseStateFromFenResult.Parsed).state
 
-private fun MoveList.filterByMovedPieceType(state: State, pieceType: PieceType): MoveList =
+private fun List<Move>.filterByMovedPieceType(state: State, pieceType: PieceType): List<Move> =
         filter { move ->
             (state.squares.getSquareByPosition(move.from) as? Square.Occupied)?.piece?.type == pieceType
         }

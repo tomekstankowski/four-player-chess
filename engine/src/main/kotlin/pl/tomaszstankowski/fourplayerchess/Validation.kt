@@ -20,16 +20,38 @@ sealed class Move {
     }
 }
 
-typealias MoveList = List<Move>
+fun getControlledPositions(color: Color, state: State): List<Position> =
+        Position.allPositions
+                .mapNotNull { pos ->
+                    when (val square = state.squares.getSquareByPosition(pos)) {
+                        is Square.Occupied ->
+                            if (square.piece.color == color) getControlledPositions(color, pos, state)
+                            else null
+                        is Square.Empty -> null
+                    }
+                }
+                .flatten()
 
-fun getValidMoves(state: State): MoveList =
+fun getControlledPositions(color: Color, position: Position, state: State): List<Position> {
+    val square = state.squares[position.rank][position.file] as Square.Occupied
+    return when (square.piece.type) {
+        Pawn -> getPawnControlledPositions(color, position)
+        Bishop -> getControlledBishopPositions(position, state)
+        Knight -> getKnightControlledPositions(position)
+        Rook -> getRookControlledPositions(position, state)
+        Queen -> getQueenControlledPositions(position, state)
+        King -> getKingControlledPositions(position)
+    }
+}
+
+fun getValidMoves(state: State): List<Move> =
         Position.allPositions
                 .mapNotNull { pos ->
                     when (val square = state.squares.getSquareByPosition(pos)) {
                         is Square.Occupied ->
                             if (square.piece.color == state.nextMoveColor) getValidMoves(pos, state)
                             else null
-                        else -> null
+                        is Square.Empty -> null
                     }
                 }
                 .flatten()
@@ -46,6 +68,12 @@ private fun getValidMoves(position: Position, state: State): List<Move> {
     }
 }
 
+private fun getPawnControlledPositions(color: Color, position: Position): List<Position> =
+        listOfNotNull(
+                position.offsetOrNull(color.pawnCaptureRightVector),
+                position.offsetOrNull(color.pawnCaptureLeftVector)
+        )
+
 private fun getValidPawnMoves(position: Position, state: State): List<Move> {
     val oneSquareForward = position.offsetOrNull(state.nextMoveColor.pawnForwardVector)
             ?.takeIf { pos -> state.squares.getSquareByPosition(pos) == Square.Empty }
@@ -56,15 +84,18 @@ private fun getValidPawnMoves(position: Position, state: State): List<Move> {
             ?.takeIf { pos -> state.squares.getSquareByPosition(pos) == Square.Empty }
             ?.takeIf { position.isPawnStartingPositionForColor(state.nextMoveColor) }
             ?.let { Move.TwoSquaresForwardPawnMove(from = position, to = it) }
-    val captureRightPos = position.offsetOrNull(state.nextMoveColor.pawnCaptureRightVector)
-    val captureLeftPos = position.offsetOrNull(state.nextMoveColor.pawnCaptureLeftVector)
-    val capturingMoves = listOfNotNull(captureLeftPos, captureRightPos)
+    val capturingMoves = getPawnControlledPositions(
+            color = state.nextMoveColor,
+            position = position
+    )
             .map { capturePosition ->
                 val capture = capturePosition.takeIf { pos ->
-                    (state.squares.getSquareByPosition(pos) as? Square.Occupied)?.piece?.color
-                            ?.let { color -> color != state.nextMoveColor }
-                            ?: false
+                    when (val square = state.squares.getSquareByPosition(pos)) {
+                        is Square.Occupied -> square.piece.color != state.nextMoveColor
+                        is Square.Empty -> false
+                    }
                 }?.let { Move.Capture(from = position, to = it) }
+
                 val captureByEnPassant = capturePosition.takeIf { capture == null }
                         ?.takeIf { state.enPassantSquares.containsValue(it) }
                         ?.let { pos ->
@@ -72,10 +103,11 @@ private fun getValidPawnMoves(position: Position, state: State): List<Move> {
                             Move.CaptureByEnPassant(
                                     from = position,
                                     to = pos,
-                                    capturedPawnPosition = pos.offsetOrNull(capturedColor.pawnForwardVector)!!
+                                    capturedPawnPosition = pos.offset(capturedColor.pawnForwardVector)
                             )
                         }
-                listOfNotNull(capture, captureByEnPassant)
+
+                return@map listOfNotNull(capture, captureByEnPassant)
             }
             .flatten()
     return listOfNotNull(oneSquareForward, twoSquaresForward) + capturingMoves
@@ -127,39 +159,45 @@ private fun Position.isPawnStartingPositionForColor(color: Color) =
             Yellow -> file == BOARD_SIZE - 2
         }
 
-private fun getValidBishopMoves(position: Position, state: State): List<Move> =
+private tailrec fun getControlledPositionsRec(position: Position,
+                                              offsetVector: Vector,
+                                              state: State,
+                                              controlledPositions: PersistentList<Position>): PersistentList<Position> {
+    val newPos = position.offsetOrNull(offsetVector) ?: return controlledPositions
+    return when (state.squares.getSquareByPosition(newPos)) {
+        is Square.Occupied -> controlledPositions + newPos
+        is Square.Empty -> getControlledPositionsRec(
+                position = newPos,
+                offsetVector = offsetVector,
+                state = state,
+                controlledPositions = controlledPositions + newPos
+        )
+    }
+}
+
+private fun Position.asCaptureOrMoveToEmptySquareOrNull(state: State, startingPosition: Position): Move? =
+        when (val square = state.squares.getSquareByPosition(this)) {
+            is Square.Occupied ->
+                if (square.piece.color == state.nextMoveColor) null
+                else Move.Capture(from = startingPosition, to = this)
+            is Square.Empty -> Move.ToEmptySquare(from = startingPosition, to = this)
+        }
+
+private fun getControlledBishopPositions(position: Position, state: State): List<Position> =
         listOf(topRightV, topLeftV, bottomLeftV, bottomRightV)
                 .map { vector ->
-                    getMovesRec(
-                            startingPosition = position,
-                            lastPosition = position,
+                    getControlledPositionsRec(
+                            position = position,
                             offsetVector = vector,
                             state = state,
-                            moves = persistentListOf()
+                            controlledPositions = persistentListOf()
                     )
                 }
                 .flatten()
 
-private tailrec fun getMovesRec(startingPosition: Position,
-                                lastPosition: Position,
-                                offsetVector: Vector,
-                                state: State,
-                                moves: PersistentList<Move>): PersistentList<Move> {
-    val newPos = lastPosition.offsetOrNull(offsetVector) ?: return moves
-    return when (val square = state.squares.getSquareByPosition(newPos)) {
-        is Square.Occupied -> when (square.piece.color) {
-            state.nextMoveColor -> moves
-            else -> moves + Move.Capture(from = startingPosition, to = newPos)
-        }
-        is Square.Empty -> getMovesRec(
-                startingPosition = startingPosition,
-                lastPosition = newPos,
-                offsetVector = offsetVector,
-                state = state,
-                moves = moves + Move.ToEmptySquare(from = startingPosition, to = newPos)
-        )
-    }
-}
+private fun getValidBishopMoves(position: Position, state: State): List<Move> =
+        getControlledBishopPositions(position, state)
+                .mapNotNull { pos -> pos.asCaptureOrMoveToEmptySquareOrNull(state = state, startingPosition = position) }
 
 private val knightMoveVectors = listOf(
         1 to 2,
@@ -171,72 +209,90 @@ private val knightMoveVectors = listOf(
         -2 to 1,
         -1 to 2)
 
-private fun getValidKnightMoves(position: Position, state: State): List<Move> =
+private fun getKnightControlledPositions(position: Position): List<Position> =
         knightMoveVectors
-                .mapNotNull { vector ->
-                    val newPos = position.offsetOrNull(vector) ?: return@mapNotNull null
-                    return@mapNotNull when (val square = state.squares.getSquareByPosition(newPos)) {
-                        is Square.Occupied ->
-                            if (square.piece.color == state.nextMoveColor) null
-                            else Move.Capture(from = position, to = newPos)
-                        is Square.Empty -> Move.ToEmptySquare(from = position, to = newPos)
-                    }
-                }
+                .mapNotNull { vector -> position.offsetOrNull(vector) }
 
-private fun getValidRookMoves(position: Position, state: State): List<Move> =
+private fun getValidKnightMoves(position: Position, state: State): List<Move> =
+        getKnightControlledPositions(position)
+                .mapNotNull { pos -> pos.asCaptureOrMoveToEmptySquareOrNull(state = state, startingPosition = position) }
+
+private fun getRookControlledPositions(position: Position, state: State): List<Position> =
         listOf(topV, rightV, bottomV, leftV)
                 .map { vector ->
-                    getMovesRec(
-                            startingPosition = position,
-                            lastPosition = position,
+                    getControlledPositionsRec(
+                            position = position,
                             offsetVector = vector,
                             state = state,
-                            moves = persistentListOf()
+                            controlledPositions = persistentListOf()
+                    )
+                }
+                .flatten()
+
+private fun getValidRookMoves(position: Position, state: State): List<Move> =
+        getRookControlledPositions(position, state)
+                .mapNotNull { pos -> pos.asCaptureOrMoveToEmptySquareOrNull(state = state, startingPosition = position) }
+
+private fun getQueenControlledPositions(position: Position, state: State): List<Position> =
+        listOf(topV, topRightV, rightV, bottomRightV,
+                bottomV, bottomLeftV, leftV, topLeftV)
+                .map { vector ->
+                    getControlledPositionsRec(
+                            position = position,
+                            offsetVector = vector,
+                            state = state,
+                            controlledPositions = persistentListOf()
                     )
                 }
                 .flatten()
 
 private fun getValidQueenMoves(position: Position, state: State): List<Move> =
+        getQueenControlledPositions(position, state)
+                .mapNotNull { pos -> pos.asCaptureOrMoveToEmptySquareOrNull(state = state, startingPosition = position) }
+
+private fun getKingControlledPositions(position: Position): List<Position> =
         listOf(topV, topRightV, rightV, bottomRightV,
                 bottomV, bottomLeftV, leftV, topLeftV)
-                .map { vector ->
-                    getMovesRec(
-                            startingPosition = position,
-                            lastPosition = position,
-                            offsetVector = vector,
-                            state = state,
-                            moves = persistentListOf()
-                    )
-                }
-                .flatten()
+                .mapNotNull { vector -> position.offsetOrNull(vector) }
 
 private fun getValidKingMoves(position: Position, state: State): List<Move> {
     val color = state.nextMoveColor
+    val positionsControlledByOtherColors = Color.values()
+            .filter { c -> c != color }
+            .map { c -> getControlledPositions(c, state) }
+            .flatten()
     val kingSideVector = color.kingSideBaseVector
-    val castleKingSide = position.offsetOrNull(kingSideVector * 2)
+    val castleKingSide = position.offsetOrNull(kingSideVector)
             ?.takeIf { state.colorToCastlingOptions[color].contains(Castling.KingSide) }
-            ?.takeIf { newPos -> state.squares.getSquareByPosition(newPos) == Square.Empty }
-            ?.takeIf { state.squares.getSquareByPosition(position.offset(kingSideVector)) == Square.Empty }
+            ?.takeIf { newRookPosition ->
+                state.squares.getSquareByPosition(newRookPosition) == Square.Empty
+                        && !positionsControlledByOtherColors.contains(newRookPosition)
+            }
+            ?.offsetOrNull(kingSideVector)
+            ?.takeIf { newKingPosition ->
+                state.squares.getSquareByPosition(newKingPosition) == Square.Empty
+                        && !positionsControlledByOtherColors.contains(newKingPosition)
+            }
             ?.let { newPos -> Move.Castling.KingSide(from = position, to = newPos) }
     val queenSideVector = color.queenSideBaseVector
-    val castleQueenSide = position.offsetOrNull(queenSideVector * 2)
+    val castleQueenSide = position.offsetOrNull(queenSideVector)
             ?.takeIf { state.colorToCastlingOptions[color].contains(Castling.QueenSide) }
-            ?.takeIf { newPos -> state.squares.getSquareByPosition(newPos) == Square.Empty }
-            ?.takeIf { state.squares.getSquareByPosition(position.offset(queenSideVector)) == Square.Empty }
+            ?.takeIf { newRookPosition ->
+                state.squares.getSquareByPosition(newRookPosition) == Square.Empty
+                        && !positionsControlledByOtherColors.contains(newRookPosition)
+            }
+            ?.offsetOrNull(queenSideVector)
+            ?.takeIf { newKingPosition ->
+                state.squares.getSquareByPosition(newKingPosition) == Square.Empty
+                        && !positionsControlledByOtherColors.contains(newKingPosition)
+            }
             ?.takeIf { state.squares.getSquareByPosition(position.offset(queenSideVector * 3)) == Square.Empty }
             ?.let { newPos -> Move.Castling.QueenSide(from = position, to = newPos) }
-    val basicMoves = listOf(topV, topRightV, rightV, bottomRightV,
-            bottomV, bottomLeftV, leftV, topLeftV)
-            .mapNotNull { vector ->
-                val newPos = position.offsetOrNull(vector) ?: return@mapNotNull null
-                return@mapNotNull when (val square = state.squares.getSquareByPosition(newPos)) {
-                    is Square.Occupied ->
-                        if (square.piece.color == color) null
-                        else Move.Capture(from = position, to = newPos)
-                    is Square.Empty -> Move.ToEmptySquare(from = position, to = newPos)
-                }
-            }
-    return basicMoves + listOfNotNull(castleKingSide, castleQueenSide)
+    val basicMoves = getKingControlledPositions(position)
+            .mapNotNull { pos -> pos.asCaptureOrMoveToEmptySquareOrNull(state = state, startingPosition = position) }
+
+    return (basicMoves + listOfNotNull(castleKingSide, castleQueenSide))
+            .filterNot { move -> positionsControlledByOtherColors.contains(move.to) }
 }
 
 
