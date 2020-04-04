@@ -5,6 +5,8 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
 import pl.tomaszstankowski.fourplayerchess.Color.*
 import pl.tomaszstankowski.fourplayerchess.PieceType.*
+import kotlin.math.max
+import kotlin.math.min
 
 sealed class Move {
     abstract val from: Position
@@ -20,30 +22,6 @@ sealed class Move {
     }
 }
 
-fun getControlledPositions(color: Color, state: State): List<Position> =
-        Position.allPositions
-                .mapNotNull { pos ->
-                    when (val square = state.squares.getSquareByPosition(pos)) {
-                        is Square.Occupied ->
-                            if (square.piece.color == color) getControlledPositions(color, pos, state)
-                            else null
-                        is Square.Empty -> null
-                    }
-                }
-                .flatten()
-
-fun getControlledPositions(color: Color, position: Position, state: State): List<Position> {
-    val square = state.squares[position.rank][position.file] as Square.Occupied
-    return when (square.piece.type) {
-        Pawn -> getPawnControlledPositions(color, position)
-        Bishop -> getControlledBishopPositions(position, state)
-        Knight -> getKnightControlledPositions(position)
-        Rook -> getRookControlledPositions(position, state)
-        Queen -> getQueenControlledPositions(position, state)
-        King -> getKingControlledPositions(position)
-    }
-}
-
 fun getValidMoves(state: State): List<Move> =
         Position.allPositions
                 .mapNotNull { pos ->
@@ -56,6 +34,54 @@ fun getValidMoves(state: State): List<Move> =
                 }
                 .flatten()
 
+private data class ValidationContext(val checks: MutableList<Check> = ArrayList(),
+                                     val pins: MutableList<Pin> = ArrayList(),
+                                     val controlledPositions: MutableList<Position> = ArrayList(),
+                                     val kingPosition: Position,
+                                     val kingColor: Color)
+
+sealed class Check {
+    abstract val checkingPiecePosition: Position
+    abstract val checkedKingPosition: Position
+}
+
+data class BlockableCheck(
+        override val checkingPiecePosition: Position,
+        override val checkedKingPosition: Position) : Check()
+
+data class UnblockableCheck(
+        override val checkingPiecePosition: Position,
+        override val checkedKingPosition: Position) : Check()
+
+
+data class Pin(val pinningPiecePosition: Position, val pinnedPiecePosition: Position)
+
+private typealias ControlledPositions = List<Position>
+
+private fun getControlledPositions(color: Color, state: State): ControlledPositions =
+        Position.allPositions
+                .mapNotNull { pos ->
+                    when (val square = state.squares.getSquareByPosition(pos)) {
+                        is Square.Occupied ->
+                            if (square.piece.color == color) getControlledPositions(color, pos, state)
+                            else null
+                        is Square.Empty -> null
+                    }
+                }
+                .flatten()
+
+private fun getControlledPositions(color: Color, position: Position, state: State): List<Position> {
+    val square = state.squares[position.rank][position.file] as Square.Occupied
+    return when (square.piece.type) {
+        Pawn -> getPawnControlledPositions(color, position)
+        Bishop -> getControlledBishopPositions(position, state)
+        Knight -> getKnightControlledPositions(position)
+        Rook -> getRookControlledPositions(position, state)
+        Queen -> getQueenControlledPositions(position, state)
+        King -> getKingControlledPositions(position)
+    }
+}
+
 private fun getValidMoves(position: Position, state: State): List<Move> {
     val square = state.squares[position.rank][position.file] as Square.Occupied
     return when (square.piece.type) {
@@ -66,6 +92,16 @@ private fun getValidMoves(position: Position, state: State): List<Move> {
         Queen -> getValidQueenMoves(position, state)
         King -> getValidKingMoves(position, state)
     }
+}
+
+private fun Position.isOnLineBetween(a: Position, b: Position): Boolean {
+    if (a.file == b.file)
+        return file == a.file && rank > min(a.rank, b.rank) && rank < max(a.rank, b.rank)
+    if (a.rank == b.rank)
+        return rank == a.rank && file > min(a.file, b.file) && file < max(a.file, b.file)
+    return (rank - a.rank) * (b.file - a.file) == (b.rank - a.rank) * (file - a.file)
+            && rank > min(a.rank, b.rank) && rank < max(a.rank, b.rank)
+            && file > min(a.file, b.file) && file < max(a.file, b.file)
 }
 
 private fun getPawnControlledPositions(color: Color, position: Position): List<Position> =
@@ -127,6 +163,7 @@ private val bottomV = 0 to -1
 private val bottomRightV = 1 to -1
 private val bottomLeftV = -1 to -1
 
+
 private val Color.pawnForwardVector: Vector
     get() = when (this) {
         Red -> topV
@@ -183,8 +220,56 @@ private fun Position.asCaptureOrMoveToEmptySquareOrNull(state: State, startingPo
             is Square.Empty -> Move.ToEmptySquare(from = startingPosition, to = this)
         }
 
+private fun scan(startingPosition: Position,
+                 vector: Vector,
+                 state: State,
+                 validationContext: ValidationContext) {
+    val controlled = getControlledPositionsRec(
+            position = startingPosition,
+            offsetVector = vector,
+            state = state,
+            controlledPositions = persistentListOf()
+    )
+    validationContext.controlledPositions += controlled
+    val lastControlledPosition = controlled.last()
+    if (lastControlledPosition == validationContext.kingPosition) {
+        validationContext.checks += BlockableCheck(
+                checkingPiecePosition = startingPosition,
+                checkedKingPosition = validationContext.kingPosition
+        )
+    }
+    val lastSquare = state.squares.getSquareByPosition(lastControlledPosition)
+    if ((lastSquare as? Square.Occupied)?.piece?.color == validationContext.kingColor) {
+        val scannedPositions = getControlledPositionsRec(
+                position = lastControlledPosition,
+                offsetVector = vector,
+                state = state,
+                controlledPositions = persistentListOf()
+        )
+        if (scannedPositions.lastOrNull() == validationContext.kingPosition) {
+            validationContext.pins += Pin(
+                    pinningPiecePosition = startingPosition,
+                    pinnedPiecePosition = lastControlledPosition)
+        }
+    }
+}
+
+private val bishopMoveVectors = listOf(topRightV, topLeftV, bottomLeftV, bottomRightV)
+
+private fun bishopScan(position: Position, state: State, validationContext: ValidationContext) {
+    bishopMoveVectors
+            .forEach { vector ->
+                scan(
+                        startingPosition = position,
+                        vector = vector,
+                        state = state,
+                        validationContext = validationContext
+                )
+            }
+}
+
 private fun getControlledBishopPositions(position: Position, state: State): List<Position> =
-        listOf(topRightV, topLeftV, bottomLeftV, bottomRightV)
+        bishopMoveVectors
                 .map { vector ->
                     getControlledPositionsRec(
                             position = position,
