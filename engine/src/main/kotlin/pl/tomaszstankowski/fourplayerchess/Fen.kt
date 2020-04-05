@@ -84,16 +84,17 @@ internal object FenGrammar : Grammar<State>() {
             ) map { it.dec() }
     private val pPosition = pFile and pRank map { (file, rank) -> Position.ofFileAndRank(file, rank) }
     private val pEnPassantSquare: Parser<Position?> = pPosition or (zero asJust null)
-    private val pEnPassantSquares = pEnPassantSquare and skip(comma) and
+    private val pEnPassantSquares: Parser<EnPassantSquares> = pEnPassantSquare and skip(comma) and
             pEnPassantSquare and skip(comma) and
             pEnPassantSquare and skip(comma) and
             pEnPassantSquare map { (redSquareOpt, greenSquareOpt, blueSquareOpt, yellowSquareOpt) ->
-        mapOf(
-                Color.Red to redSquareOpt,
-                Color.Green to greenSquareOpt,
-                Color.Blue to blueSquareOpt,
-                Color.Yellow to yellowSquareOpt
-        )
+        listOfNotNull(
+                redSquareOpt?.let { Color.Red to it },
+                greenSquareOpt?.let { Color.Green to it },
+                blueSquareOpt?.let { Color.Blue to it },
+                yellowSquareOpt?.let { Color.Yellow to it }
+
+        ).toMap()
     }
 
     private val pTrue = one asJust true

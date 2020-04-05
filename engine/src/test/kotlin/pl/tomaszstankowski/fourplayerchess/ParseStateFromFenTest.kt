@@ -74,9 +74,6 @@ class ParseStateFromFenTest : Spek({
                         ),
                         nextMoveColor = Blue,
                         enPassantSquares = mapOf(
-                                Red to null,
-                                Green to null,
-                                Blue to null,
                                 Yellow to Position.ofFileAndRank(6, 11)
                         ),
                         colorToCastlingOptions = CastlingOptions(
