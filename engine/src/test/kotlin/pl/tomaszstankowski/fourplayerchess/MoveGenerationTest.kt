@@ -4,7 +4,7 @@ import org.amshove.kluent.shouldBeEqualTo
 import org.spekframework.spek2.Spek
 import pl.tomaszstankowski.fourplayerchess.PieceType.*
 
-class MoveValidationTest : Spek({
+class MoveGenerationTest : Spek({
 
     group("pawn") {
 
@@ -27,7 +27,7 @@ class MoveValidationTest : Spek({
             6,rK,7
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("g2"), to = Position.parse("g3")),
@@ -54,7 +54,7 @@ class MoveValidationTest : Spek({
             6,rK,7
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
         }
@@ -78,7 +78,7 @@ class MoveValidationTest : Spek({
             6,rK,7
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("g2"), to = Position.parse("g3"))
@@ -104,7 +104,7 @@ class MoveValidationTest : Spek({
             6,rK,7
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
         }
@@ -128,7 +128,7 @@ class MoveValidationTest : Spek({
             6,rK,7
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("g2"), to = Position.parse("g3"))
@@ -154,7 +154,7 @@ class MoveValidationTest : Spek({
             6,rK,7
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("g3"), to = Position.parse("g4"))
@@ -180,7 +180,7 @@ class MoveValidationTest : Spek({
             6,rK,7
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
         }
@@ -204,7 +204,7 @@ class MoveValidationTest : Spek({
             6,rK,7
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
         }
@@ -228,7 +228,7 @@ class MoveValidationTest : Spek({
             6,rK,7
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("g3"), to = Position.parse("g4")),
@@ -255,7 +255,7 @@ class MoveValidationTest : Spek({
             6,rK,7
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("g3"), to = Position.parse("g4")),
@@ -282,12 +282,12 @@ class MoveValidationTest : Spek({
             6,rK,7
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("g3"), to = Position.parse("g4")),
-                    Move.Capture(from = Position.parse("g3"), to = Position.parse("h4")),
-                    Move.Capture(from = Position.parse("g3"), to = Position.parse("f4"))
+                    Move.Capture(from = Position.parse("g3"), to = Position.parse("f4")),
+                    Move.Capture(from = Position.parse("g3"), to = Position.parse("h4"))
             )
         }
 
@@ -310,7 +310,7 @@ class MoveValidationTest : Spek({
             6,rK,7
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("g11"), to = Position.parse("g12")),
@@ -341,7 +341,7 @@ class MoveValidationTest : Spek({
             6,rK,7
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("g11"), to = Position.parse("g12")),
@@ -351,6 +351,82 @@ class MoveValidationTest : Spek({
                             capturedPawnPosition = Position.parse("f11")
                     )
             )
+        }
+
+        test("cannot move from pin line") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            14/
+            3,bK,2,bR,7/
+            14/
+            14/
+            14/
+            7,bR,6/
+            6,rP,7/
+            6,rK,7/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
+                    Move.ToEmptySquare(from = Position.parse("g4"), to = Position.parse("g5"))
+            )
+        }
+
+        test("must stop check") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            14/
+            3,bK,10/
+            14/
+            14/
+            14/
+            7,bN,6/
+            6,rP,7/
+            6,rK,7/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
+                    Move.Capture(from = Position.parse("g4"), to = Position.parse("h5"))
+            )
+        }
+
+        test("cannot stop two or more checks") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            14/
+            3,bK,10/
+            14/
+            14/
+            14/
+            7,bN,6/
+            6,rP,7/
+            4,bR,1,rK,7/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
         }
     }
 
@@ -375,7 +451,7 @@ class MoveValidationTest : Spek({
                 3,rR,rN,1,rQ,rK,1,rN,rR,3
             """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("i4"), to = Position.parse("j5")),
@@ -395,6 +471,108 @@ class MoveValidationTest : Spek({
                     Move.ToEmptySquare(from = Position.parse("i4"), to = Position.parse("f1")),
                     Move.ToEmptySquare(from = Position.parse("i4"), to = Position.parse("j3"))
             )
+        }
+
+        test("cannot move from pin line") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            14/
+            3,bK,10/
+            14/
+            14/
+            14/
+            7,bN,6/
+            1,bR,4,rB,rK,6/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf()
+        }
+
+        test("can capture pinning piece") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            14/
+            3,bK,10/
+            14/
+            3,bB,3,bN,6/
+            14/
+            14/
+            6,rB,7/
+            7,rK,6/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf(
+                    Move.ToEmptySquare(from = Position.parse("g4"), to = Position.parse("f5")),
+                    Move.ToEmptySquare(from = Position.parse("g4"), to = Position.parse("e6")),
+                    Move.Capture(from = Position.parse("g4"), to = Position.parse("d7"))
+            )
+        }
+
+        test("must stop check") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            14/
+            3,bK,10/
+            14/
+            14/
+            1,bR,12/
+            7,bN,6/
+            6,rB,7/
+            6,rK,7/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf(
+                    Move.Capture(from = Position.parse("g4"), to = Position.parse("h5"))
+            )
+        }
+
+        test("cannot stop two or more checks") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            14/
+            3,bK,10/
+            14/
+            14/
+            14/
+            7,bN,6/
+            6,rB,7/
+            3,bR,2,rK,7/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf()
         }
     }
 
@@ -419,7 +597,7 @@ class MoveValidationTest : Spek({
             3,rR,1,rB,rQ,rK,rB,1,rR,3
         """.trimIndent())
 
-            val moves = getValidMoves(state)
+            val moves = getLegalMoves(state)
 
             moves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("f3"), to = Position.parse("g5")),
@@ -428,6 +606,80 @@ class MoveValidationTest : Spek({
                     Move.ToEmptySquare(from = Position.parse("f3"), to = Position.parse("d4")),
                     Move.ToEmptySquare(from = Position.parse("f3"), to = Position.parse("e5"))
             )
+        }
+
+        test("cannot move from pin line") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            6,bR,7/
+            3,bK,10/
+            14/
+            14/
+            14/
+            8,bB,5/
+            6,rN,7/
+            6,rK,7/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf()
+        }
+
+        test("must stop check") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            5,bR,8/
+            3,bK,10/
+            14/
+            14/
+            14/
+            8,bB,5/
+            6,rN,7/
+            6,rK,7/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf(
+                    Move.Capture(from = Position.parse("g4"), to = Position.parse("i5"))
+            )
+        }
+
+        test("cannot stop two or more checks") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            14/
+            3,bK,10/
+            14/
+            14/
+            14/
+            8,bB,5/
+            6,rN,7/
+            4,bR,1,rK,7/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf()
         }
     }
 
@@ -452,7 +704,7 @@ class MoveValidationTest : Spek({
             4,rN,rB,rQ,rK,rB,1,rR,3
         """.trimIndent())
 
-            val moves = getValidMoves(state)
+            val moves = getLegalMoves(state)
 
             moves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("d4"), to = Position.parse("d5")),
@@ -482,6 +734,108 @@ class MoveValidationTest : Spek({
 
             )
         }
+
+        test("cannot move from pin line") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            14/
+            3,bK,2,bR,7/
+            14/
+            14/
+            4,bB,9/
+            14/
+            6,rR,7/
+            7,rK,6/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf()
+        }
+
+        test("can capture pinning piece") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            14/
+            3,bK,10/
+            14/
+            14/
+            14/
+            11,bB,2/
+            14/
+            3,bR,2,rR,rK,6/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf(
+                    Move.ToEmptySquare(from = Position.parse("g3"), to = Position.parse("f3")),
+                    Move.ToEmptySquare(from = Position.parse("g3"), to = Position.parse("e3")),
+                    Move.Capture(from = Position.parse("g3"), to = Position.parse("d3"))
+            )
+        }
+
+        test("must stop check") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            14/
+            3,bK,2,bR,7/
+            14/
+            14/
+            14/
+            14/
+            6,rR,1,bB,5/
+            7,rK,6/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf(
+                    Move.Capture(from = Position.parse("g4"), to = Position.parse("i4"))
+            )
+        }
+
+        test("cannot stop two or more checks") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            14/
+            3,bK,10/
+            14/
+            14/
+            14/
+            14/
+            6,rR,1,bB,5/
+            4,bR,2,rK,6/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf()
+        }
     }
 
     group("queen") {
@@ -505,7 +859,7 @@ class MoveValidationTest : Spek({
             3,rR,rN,rB,1,rK,rB,rN,rR,3
         """.trimIndent())
 
-            val moves = getValidMoves(state)
+            val moves = getLegalMoves(state)
 
             moves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("j6"), to = Position.parse("j7")),
@@ -551,6 +905,86 @@ class MoveValidationTest : Spek({
                     Move.ToEmptySquare(from = Position.parse("j6"), to = Position.parse("d12"))
             )
         }
+
+        test("cannot move from pin line") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            5,bK,bB,7/
+            6,bR,7/
+            14/
+            14/
+            8,bN,5/
+            14/
+            6,rQ,7/
+            6,rK,7/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf(
+                    Move.ToEmptySquare(from = Position.parse("g4"), to = Position.parse("g5")),
+                    Move.ToEmptySquare(from = Position.parse("g4"), to = Position.parse("g6")),
+                    Move.ToEmptySquare(from = Position.parse("g4"), to = Position.parse("g7")),
+                    Move.ToEmptySquare(from = Position.parse("g4"), to = Position.parse("g8")),
+                    Move.Capture(from = Position.parse("g4"), to = Position.parse("g9"))
+            )
+        }
+
+        test("must stop check") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            6,bB,7/
+            5,bK,8/
+            8,bR,5/
+            14/
+            14/
+            14/
+            6,rQ,1,bN,5/
+            6,rK,7/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf(
+                    Move.Capture(from = Position.parse("g4"), to = Position.parse("i4"))
+            )
+        }
+
+        test("cannot stop two or more checks") {
+            val state = parseStateFromFenOrThrow("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-78-
+            14/
+            14/
+            14/
+            14/
+            6,bB,7/
+            5,bK,8/
+            14/
+            14/
+            14/
+            14/
+            6,rQ,1,bN,5/
+            5,bR,rK,7/
+            14/
+            14
+        """.trimIndent())
+
+            val validMoves = getLegalMoves(state)
+
+            validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf()
+        }
     }
 
     group("king") {
@@ -574,7 +1008,7 @@ class MoveValidationTest : Spek({
             14
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("e2"), to = Position.parse("e3")),
@@ -607,7 +1041,7 @@ class MoveValidationTest : Spek({
             14
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("e2"), to = Position.parse("e3")),
@@ -638,7 +1072,7 @@ class MoveValidationTest : Spek({
             3,rR,1,rB,1,rK,1,rN,rR,3
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("i1")),
@@ -665,7 +1099,7 @@ class MoveValidationTest : Spek({
             3,rR,rN,rB,rQ,rK,2,rR,3
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf()
         }
@@ -689,7 +1123,7 @@ class MoveValidationTest : Spek({
             3,rR,rN,rB,rQ,rK,2,rR,3
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("i1"))
@@ -715,7 +1149,7 @@ class MoveValidationTest : Spek({
             3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf()
         }
@@ -739,7 +1173,7 @@ class MoveValidationTest : Spek({
             3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("g1"))
@@ -765,11 +1199,11 @@ class MoveValidationTest : Spek({
             3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("g1")),
-                    Move.Castling.QueenSide(from = Position.parse("h1"), to = Position.parse("f1"))
+                    Move.Castling.QueenSide(from = Position.parse("h1"), to = Position.parse("f1")),
+                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("g1"))
             )
         }
 
@@ -792,7 +1226,7 @@ class MoveValidationTest : Spek({
             3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("g1"))
@@ -818,7 +1252,7 @@ class MoveValidationTest : Spek({
             3,rR,3,rK,2,rR,3
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("i1")),
@@ -845,7 +1279,7 @@ class MoveValidationTest : Spek({
             3,rR,rN,rB,rQ,rK,2,rR,3
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("i1"))
@@ -871,11 +1305,11 @@ class MoveValidationTest : Spek({
             3,rR,rN,rB,rQ,rK,2,rR,3
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("i1")),
-                    Move.Castling.KingSide(from = Position.parse("h1"), to = Position.parse("j1"))
+                    Move.Castling.KingSide(from = Position.parse("h1"), to = Position.parse("j1")),
+                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("i1"))
             )
         }
 
@@ -898,12 +1332,12 @@ class MoveValidationTest : Spek({
             3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+                    Move.Castling.QueenSide(from = Position.parse("h1"), to = Position.parse("f1")),
                     Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("h2")),
-                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("g1")),
-                    Move.Castling.QueenSide(from = Position.parse("h1"), to = Position.parse("f1"))
+                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("g1"))
             )
         }
 
@@ -926,13 +1360,14 @@ class MoveValidationTest : Spek({
             3,rR,3,rK,2,rR,3
         """.trimIndent())
 
-            val validMoves = getValidMoves(state)
+            val validMoves = getLegalMoves(state)
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("i1")),
-                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("g1")),
                     Move.Castling.KingSide(from = Position.parse("h1"), to = Position.parse("j1")),
-                    Move.Castling.QueenSide(from = Position.parse("h1"), to = Position.parse("f1"))
+                    Move.Castling.QueenSide(from = Position.parse("h1"), to = Position.parse("f1")),
+                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("i1")),
+                    Move.ToEmptySquare(from = Position.parse("h1"), to = Position.parse("g1"))
+
             )
         }
     }
@@ -943,5 +1378,5 @@ private fun parseStateFromFenOrThrow(input: String): State =
 
 private fun List<Move>.filterByMovedPieceType(state: State, pieceType: PieceType): List<Move> =
         filter { move ->
-            (state.squares.getSquareByPosition(move.from) as? Square.Occupied)?.piece?.type == pieceType
+            (state.squares.byPosition(move.from) as? Square.Occupied)?.piece?.type == pieceType
         }

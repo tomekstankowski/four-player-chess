@@ -144,7 +144,7 @@ typealias Row = List<Square>
 
 typealias Board = List<Row>
 
-fun Board.getSquareByPosition(position: Position): Square =
+fun Board.byPosition(position: Position): Square =
         this[position.rank][position.file]
 
 data class PlyCount internal constructor(val count: Int) {
