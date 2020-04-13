@@ -37,19 +37,7 @@ enum class PieceType {
     Pawn, Knight, Bishop, Rook, Queen, King
 }
 
-data class Piece internal constructor(val type: PieceType, val color: Color) {
-
-    companion object {
-        val allPieces = PieceType.values().map { pieceType ->
-            Color.values().map { color ->
-                Piece(pieceType, color)
-            }
-        }
-                .flatten()
-
-        fun get(type: PieceType, color: Color) = allPieces.first { it.type == type && it.color == color }
-    }
-}
+data class Piece internal constructor(val type: PieceType, val color: Color)
 
 data class Position internal constructor(val file: Int, val rank: Int) {
 
@@ -127,18 +115,31 @@ typealias EnPassantSquares = Map<Color, Position>
 
 sealed class Square {
     data class Occupied internal constructor(val piece: Piece) : Square() {
+
         companion object {
-            val allSquares = Piece.allPieces.map { piece -> Occupied(piece) }
+
+            private val squares = Array<Array<Square.Occupied>>(PieceType.values().size) { i ->
+                Array(Color.values().size) { j ->
+                    Square.Occupied(
+                            Piece(
+                                    type = PieceType.values()[i],
+                                    color = Color.values()[j]
+                            )
+                    )
+                }
+            }
+
+            fun by(color: Color, pieceType: PieceType): Square.Occupied = squares[pieceType.ordinal][color.ordinal]
         }
     }
 
     object Empty : Square()
 }
 
-fun squareOf(color: Color, pieceType: PieceType) =
-        Square.Occupied.allSquares.first { square -> square.piece == Piece.get(pieceType, color) }
+internal fun squareOf(color: Color, pieceType: PieceType) =
+        Square.Occupied.by(color, pieceType)
 
-fun emptySquare() = Square.Empty
+internal fun emptySquare() = Square.Empty
 
 typealias Row = List<Square>
 

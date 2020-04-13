@@ -7,6 +7,7 @@ import com.github.h0tk3y.betterParse.parser.ErrorResult
 import com.github.h0tk3y.betterParse.parser.ParseResult
 import com.github.h0tk3y.betterParse.parser.Parsed
 import com.github.h0tk3y.betterParse.parser.Parser
+import pl.tomaszstankowski.fourplayerchess.PieceType.King
 
 
 data class IllegalRowLength(val length: Int) : ErrorResult()
@@ -17,7 +18,7 @@ data class PiecesWithoutKing(val color: Color) : ErrorResult()
 
 private sealed class RowToken {
     data class EmptySquaresToken(val count: Int) : RowToken()
-    data class PieceToken(val piece: Piece) : RowToken()
+    data class OccupiedSquareToken(val square: Square.Occupied) : RowToken()
 }
 
 internal object FenGrammar : Grammar<State>() {
@@ -117,7 +118,7 @@ internal object FenGrammar : Grammar<State>() {
     private val pBishop = upperB asJust PieceType.Bishop
     private val pRook = upperR asJust PieceType.Rook
     private val pQueen = upperQ asJust PieceType.Queen
-    private val pKing = upperK asJust PieceType.King
+    private val pKing = upperK asJust King
     private val pPieceType = pPawn or pKnight or pBishop or pRook or pQueen or pKing
 
     private val pLowerRed = r asJust Color.Red
@@ -125,11 +126,11 @@ internal object FenGrammar : Grammar<State>() {
     private val pLowerBlue = b asJust Color.Blue
     private val pLowerYellow = y asJust Color.Yellow
     private val pLowerColor = pLowerRed or pLowerGreen or pLowerBlue or pLowerYellow
-    private val pPieceToken = pLowerColor and pPieceType map { (color, pieceType) ->
-        RowToken.PieceToken(Piece.get(pieceType, color))
+    private val pOccupiedSquareToken = pLowerColor and pPieceType map { (color, pieceType) ->
+        RowToken.OccupiedSquareToken(square = Square.Occupied.by(color, pieceType))
     }
     private val pEmptySquaresToken = pRank map { RowToken.EmptySquaresToken(it.inc()) }
-    private val pRowToken = pPieceToken or pEmptySquaresToken
+    private val pRowToken = pOccupiedSquareToken or pEmptySquaresToken
     private val pRowTokens = separatedTerms(
             term = pRowToken,
             separator = comma
@@ -142,7 +143,7 @@ internal object FenGrammar : Grammar<State>() {
                     val rowLength = result.value.sumBy { token ->
                         when (token) {
                             is RowToken.EmptySquaresToken -> token.count
-                            is RowToken.PieceToken -> 1
+                            is RowToken.OccupiedSquareToken -> 1
                         }
                     }
                     return if (rowLength == BOARD_SIZE) {
@@ -160,7 +161,7 @@ internal object FenGrammar : Grammar<State>() {
         tokens.map { token ->
             when (token) {
                 is RowToken.EmptySquaresToken -> List(size = token.count) { Square.Empty }
-                is RowToken.PieceToken -> listOf(element = Square.Occupied(token.piece))
+                is RowToken.OccupiedSquareToken -> listOf(element = token.square)
             }
         }
                 .flatten()
@@ -175,7 +176,7 @@ internal object FenGrammar : Grammar<State>() {
                     val kingCountsByColor = Color.values()
                             .map { color ->
                                 val count = allSquares
-                                        .filter { square -> square is Square.Occupied && square.piece == Piece.get(PieceType.King, color) }
+                                        .filter { square -> square == Square.Occupied.by(color, King) }
                                         .size
                                 color to count
                             }
