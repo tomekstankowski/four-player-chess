@@ -72,11 +72,12 @@ class ParseStateFromFenTest : Spek({
                                 listOf(emptySquare(), emptySquare(), emptySquare(), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), emptySquare(), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), emptySquare(), emptySquare(), emptySquare()),
                                 listOf(emptySquare(), emptySquare(), emptySquare(), squareOf(Yellow, Rook), squareOf(Yellow, Knight), squareOf(Yellow, Bishop), squareOf(Yellow, King), squareOf(Yellow, Queen), squareOf(Yellow, Bishop), emptySquare(), squareOf(Yellow, Rook), emptySquare(), emptySquare(), emptySquare())
                         ),
+                        eliminatedColors = emptySet(),
                         nextMoveColor = Blue,
                         enPassantSquares = mapOf(
                                 Yellow to Position.ofFileAndRank(6, 11)
                         ),
-                        colorToCastlingOptions = CastlingOptions(
+                        castlingOptions = CastlingOptions(
                                 mapOf(
                                         Red to emptySet(),
                                         Green to setOf(KingSide, QueenSide),

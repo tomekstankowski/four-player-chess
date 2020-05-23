@@ -1,29 +1,19 @@
 package pl.tomaszstankowski.fourplayerchess
 
-import pl.tomaszstankowski.fourplayerchess.Color.*
 import pl.tomaszstankowski.fourplayerchess.PieceType.*
-import kotlin.math.max
-import kotlin.math.min
 
-sealed class Move {
-    abstract val from: Position
-    abstract val to: Position
+data class Move(val from: Position, val to: Position)
 
-    data class ToEmptySquare(override val from: Position, override val to: Position) : Move()
-    data class TwoSquaresForwardPawnMove(override val from: Position, override val to: Position) : Move()
-    data class Capture(override val from: Position, override val to: Position) : Move()
-    data class CaptureByEnPassant(override val from: Position, override val to: Position, val capturedPawnPosition: Position) : Move()
-    sealed class Castling : Move() {
-        data class KingSide(override val from: Position, override val to: Position) : Castling()
-        data class QueenSide(override val from: Position, override val to: Position) : Castling()
-    }
-}
+data class StateFeatures(val legalMoves: List<Move>, val isCheck: Boolean)
 
-fun getLegalMoves(state: State): List<Move> {
+internal fun getStateFeatures(state: State): StateFeatures {
     val pseudoMoves = genPseudoMoves(state)
     val opponentsActivity = checkActivityOfOpponents(state)
     removeIllegalMoves(state, pseudoMoves, opponentsActivity)
-    return pseudoMoves
+    return StateFeatures(
+            legalMoves = pseudoMoves,
+            isCheck = opponentsActivity.checks.isNotEmpty()
+    )
 }
 
 private data class OpponentsActivity(val checks: MutableList<Check> = ArrayList(),
@@ -37,20 +27,18 @@ private data class Pin(val pinningPiecePosition: Position, val pinnedPiecePositi
 
 private fun checkActivityOfOpponents(state: State): OpponentsActivity {
     val opponentsActivity = OpponentsActivity()
-    val kingPosition = Position.allPositions.first { pos ->
-        val square = state.squares.byPosition(pos)
-        square is Square.Occupied && square.piece.color == state.nextMoveColor && square.piece.type == King
-    }
     Position.allPositions
             .forEach { pos ->
                 val square = state.squares.byPosition(pos)
-                if (square is Square.Occupied && square.piece.color != state.nextMoveColor) {
+                if (square is Square.Occupied
+                        && square.piece.color != state.nextMoveColor
+                        && !state.eliminatedColors.contains(square.piece.color)) {
                     when (square.piece.type) {
-                        Pawn -> checkPawnActivity(square.piece.color, pos, kingPosition, opponentsActivity)
-                        Bishop -> checkBishopActivity(pos, state, kingPosition, opponentsActivity)
-                        Knight -> checkKnightActivity(pos, kingPosition, opponentsActivity)
-                        Rook -> checkRootActivity(pos, state, kingPosition, opponentsActivity)
-                        Queen -> checkQueenActivity(pos, state, kingPosition, opponentsActivity)
+                        Pawn -> checkPawnActivity(pos, state, opponentsActivity)
+                        Bishop -> checkBishopActivity(pos, state, opponentsActivity)
+                        Knight -> checkKnightActivity(pos, state, opponentsActivity)
+                        Rook -> checkRootActivity(pos, state, opponentsActivity)
+                        Queen -> checkQueenActivity(pos, state, opponentsActivity)
                         King -> checkKingActivity(pos, opponentsActivity)
                     }
                 }
@@ -80,23 +68,26 @@ private fun genPseudoMoves(state: State): MutableList<Move> {
 }
 
 private fun removeIllegalMoves(state: State, pseudoMoves: MutableList<Move>, opponentsActivity: OpponentsActivity) {
+    val kingSquare = Square.Occupied.by(state.nextMoveColor, King)
     pseudoMoves.removeIf { move ->
-        val movingPieceType = (state.squares.byPosition(move.from) as Square.Occupied).piece.type
-        if (movingPieceType == King) {
+        val fromSquare = state.squares.byPosition(move.from)
+        if (fromSquare == kingSquare) {
             if (opponentsActivity.controlledPositions.contains(move.to)) {
                 return@removeIf true
             }
-            if (move is Move.Castling) {
+            val isKingSideCastling = move.isKingSideCastling(state)
+            val isQueenSideCastling = move.isQueenSideCastling(state)
+            if (isKingSideCastling || isQueenSideCastling) {
                 if (opponentsActivity.checks.count() > 0) {
                     return@removeIf true
                 }
-                if (move is Move.Castling.KingSide) {
+                if (isKingSideCastling) {
                     val newRookPos = move.from.offset(state.nextMoveColor.kingSideVector)
                     if (opponentsActivity.controlledPositions.contains(newRookPos)) {
                         return@removeIf true
                     }
                 }
-                if (move is Move.Castling.QueenSide) {
+                if (isQueenSideCastling) {
                     val newRookPos = move.from.offset(state.nextMoveColor.queenSideVector)
                     if (opponentsActivity.controlledPositions.contains(newRookPos)) {
                         return@removeIf true
@@ -142,69 +133,52 @@ private fun removeIllegalMoves(state: State, pseudoMoves: MutableList<Move>, opp
     }
 }
 
-private fun Position.isAdjacentTo(other: Position) =
-        allDirectionsVectors.any { vector -> this.offsetOrNull(vector) == other }
-
-private fun Position.isOnLineBetween(a: Position, b: Position): Boolean {
-    if (a.file == b.file)
-        return file == a.file && rank > min(a.rank, b.rank) && rank < max(a.rank, b.rank)
-    if (a.rank == b.rank)
-        return rank == a.rank && file > min(a.file, b.file) && file < max(a.file, b.file)
-    return (rank - a.rank) * (b.file - a.file) == (b.rank - a.rank) * (file - a.file)
-            && rank > min(a.rank, b.rank) && rank < max(a.rank, b.rank)
-            && file > min(a.file, b.file) && file < max(a.file, b.file)
+private fun toMoveOrNull(position: Position, vector: Vector, state: State): Move? {
+    val newPos = position.offsetOrNull(vector) ?: return null
+    return when (val square = state.squares.byPosition(newPos)) {
+        is Square.Occupied ->
+            if (square.piece.color == state.nextMoveColor) null
+            else Move(from = position, to = newPos)
+        is Square.Empty -> Move(from = position, to = newPos)
+    }
 }
-
-private fun Position.isPawnStartingPositionForColor(color: Color) =
-        when (color) {
-            Red -> rank == 1
-            Green -> rank == BOARD_SIZE - 2
-            Blue -> file == 1
-            Yellow -> file == BOARD_SIZE - 2
-        }
-
-private fun Position.asCaptureOrMoveToEmptySquareOrNull(state: State, startingPosition: Position): Move? =
-        when (val square = state.squares.byPosition(this)) {
-            is Square.Occupied ->
-                if (square.piece.color == state.nextMoveColor) null
-                else Move.Capture(from = startingPosition, to = this)
-            is Square.Empty -> Move.ToEmptySquare(from = startingPosition, to = this)
-        }
 
 private fun checkOpponentMove(position: Position,
                               moveVector: Vector,
-                              kingPosition: Position,
+                              state: State,
                               opponentsActivity: OpponentsActivity) {
     val newPos = position.offsetOrNull(moveVector)
     if (newPos != null) {
         opponentsActivity.controlledPositions += newPos
-        if (newPos == kingPosition) {
+        val square = state.squares.byPosition(newPos)
+        if (square == Square.Occupied.by(state.nextMoveColor, King)) {
             opponentsActivity.checks += Check(
                     checkingPiecePosition = position,
-                    checkedKingPosition = kingPosition
+                    checkedKingPosition = newPos
             )
         }
     }
 }
 
-private fun checkPawnActivity(color: Color, position: Position, kingPosition: Position, opponentsActivity: OpponentsActivity) {
-    color.pawnCapturingVectors
+private fun checkPawnActivity(position: Position, state: State, opponentsActivity: OpponentsActivity) {
+    val pawnColor = (state.squares.byPosition(position) as Square.Occupied).piece.color
+    pawnColor.pawnCapturingVectors
             .forEach { vector ->
-                checkOpponentMove(position, vector, kingPosition, opponentsActivity)
+                checkOpponentMove(position, vector, state, opponentsActivity)
             }
 }
 
 private fun genPawnPseudoMoves(position: Position, state: State, moves: MutableList<Move>) {
     position.offsetOrNull(state.nextMoveColor.pawnForwardVector)
             ?.takeIf { pos -> state.squares.byPosition(pos) == Square.Empty }
-            ?.let { Move.ToEmptySquare(from = position, to = it) }
+            ?.let { Move(from = position, to = it) }
             ?.let { moves += it }
     position.takeIf { position.isPawnStartingPositionForColor(state.nextMoveColor) }
             ?.offsetOrNull(state.nextMoveColor.pawnForwardVector)
             ?.takeIf { pos -> state.squares.byPosition(pos) == Square.Empty }
             ?.offsetOrNull(state.nextMoveColor.pawnForwardVector)
             ?.takeIf { pos -> state.squares.byPosition(pos) == Square.Empty }
-            ?.let { newPos -> Move.TwoSquaresForwardPawnMove(from = position, to = newPos) }
+            ?.let { newPos -> Move(from = position, to = newPos) }
             ?.let { moves += it }
     state.nextMoveColor.pawnCapturingVectors
             .forEach { vector ->
@@ -215,144 +189,77 @@ private fun genPawnPseudoMoves(position: Position, state: State, moves: MutableL
                         is Square.Empty -> false
                     }
                 }
-                        ?.let { Move.Capture(from = position, to = it) }
+                        ?.let { Move(from = position, to = it) }
                         ?.let { moves += it }
 
                 capturePos.takeIf { state.enPassantSquares.containsValue(it) }
-                        ?.let { pos ->
-                            val capturedColor = state.enPassantSquares.entries.first { (_, p) -> pos == p }.key
-                            Move.CaptureByEnPassant(
-                                    from = position,
-                                    to = pos,
-                                    capturedPawnPosition = pos.offset(capturedColor.pawnForwardVector)
-                            )
-                        }
+                        ?.let { pos -> Move(from = position, to = pos) }
                         ?.let { moves += it }
             }
 }
 
-private typealias Vector = Pair<Int, Int>
-
-private val topV = 0 to 1
-private val topRightV = 1 to 1
-private val topLeftV = -1 to 1
-private val rightV = 1 to 0
-private val leftV = -1 to 0
-private val bottomV = 0 to -1
-private val bottomRightV = 1 to -1
-private val bottomLeftV = -1 to -1
-
-private val allDirectionsVectors = listOf(
-        topV,
-        topRightV,
-        rightV,
-        bottomRightV,
-        bottomV,
-        bottomLeftV,
-        leftV,
-        topLeftV
-)
-
-private val Color.pawnForwardVector: Vector
-    get() = when (this) {
-        Red -> topV
-        Green -> leftV
-        Blue -> rightV
-        Yellow -> bottomV
-    }
-
-private val redPawnCapturingVectors = listOf(topLeftV, topRightV)
-private val greenPawnCapturingVectors = listOf(bottomLeftV, topLeftV)
-private val bluePawnCapturingVectors = listOf(topRightV, bottomRightV)
-private val yellowPawnCapturingVectors = listOf(bottomRightV, bottomLeftV)
-
-private val Color.pawnCapturingVectors: List<Vector>
-    get() = when (this) {
-        Red -> redPawnCapturingVectors
-        Green -> greenPawnCapturingVectors
-        Blue -> bluePawnCapturingVectors
-        Yellow -> yellowPawnCapturingVectors
-    }
-
-private val bishopMoveVectors = listOf(topRightV, topLeftV, bottomLeftV, bottomRightV)
-
-private val knightMoveVectors = listOf(
-        1 to 2,
-        2 to 1,
-        2 to -1,
-        1 to -2,
-        -1 to -2,
-        -2 to -1,
-        -2 to 1,
-        -1 to 2)
-
-private val rookMoveVectors = listOf(topV, rightV, bottomV, leftV)
-
-private val Color.kingSideVector: Vector
-    get() = when (this) {
-        Red -> rightV
-        Green -> bottomV
-        Blue -> topV
-        Yellow -> leftV
-    }
-
-private val Color.queenSideVector: Vector
-    get() = when (this) {
-        Red -> leftV
-        Green -> topV
-        Blue -> bottomV
-        Yellow -> rightV
-    }
-
 private fun scan(startingPosition: Position,
                  vector: Vector,
-                 kingPosition: Position,
                  state: State,
                  opponentsActivity: OpponentsActivity) {
-    var lastPos = startingPosition
-    var endReached = false
-    while (!endReached) {
-        val newPos = lastPos.offsetOrNull(vector) ?: break
-        lastPos = newPos
-        opponentsActivity.controlledPositions += newPos
-        endReached = when (state.squares.byPosition(newPos)) {
-            is Square.Occupied -> true
-            is Square.Empty -> false
-        }
-    }
-    val lastControlledPosition = lastPos
-    if (lastControlledPosition == startingPosition) {
+    val lastPositionInSight = traverseSquares(
+            startingPosition = startingPosition,
+            vector = vector,
+            forEachDo = { pos -> opponentsActivity.controlledPositions += pos },
+            stopPredicate = { pos -> state.squares.byPosition(pos) is Square.Occupied }
+    )
+    if (lastPositionInSight == startingPosition) {
         return
     }
-    if (lastControlledPosition == kingPosition) {
+    val lastSquareInSight = state.squares.byPosition(lastPositionInSight)
+    if (lastSquareInSight == Square.Occupied.by(state.nextMoveColor, King)) {
         opponentsActivity.checks += Check(
                 checkingPiecePosition = startingPosition,
-                checkedKingPosition = kingPosition
+                checkedKingPosition = lastPositionInSight
         )
-        return
-    }
-    val lastSquare = state.squares.byPosition(lastControlledPosition)
-    if ((lastSquare as? Square.Occupied)?.piece?.color == state.nextMoveColor) {
-        while (true) {
-            val newPos = lastPos.offsetOrNull(vector) ?: return
-            lastPos = newPos
-            val square = state.squares.byPosition(newPos)
-            if (square is Square.Occupied) {
-                if (newPos == kingPosition) {
-                    opponentsActivity.pins += Pin(
-                            pinningPiecePosition = startingPosition,
-                            pinnedPiecePosition = lastControlledPosition)
-                }
-                return
-            }
+        // squares behind the king are controlled as well - the king can't move there
+        traverseSquares(
+                startingPosition = lastPositionInSight,
+                vector = vector,
+                forEachDo = { pos -> opponentsActivity.controlledPositions += pos },
+                stopPredicate = { pos -> state.squares.byPosition(pos) is Square.Occupied }
+        )
+    } else if ((lastSquareInSight as? Square.Occupied)?.piece?.color == state.nextMoveColor) {
+        val lastXrayedPosition = traverseSquares(
+                startingPosition = lastPositionInSight,
+                vector = vector,
+                stopPredicate = { pos -> state.squares.byPosition(pos) is Square.Occupied }
+        )
+        val lastXrayedSquare = state.squares.byPosition(lastXrayedPosition)
+        if (lastXrayedSquare == Square.Occupied.by(state.nextMoveColor, King)) {
+            opponentsActivity.pins += Pin(
+                    pinningPiecePosition = startingPosition,
+                    pinnedPiecePosition = lastPositionInSight
+            )
         }
     }
 }
 
-private fun checkBishopActivity(position: Position, state: State, kingPosition: Position, opponentsActivity: OpponentsActivity) {
+private inline fun traverseSquares(
+        startingPosition: Position,
+        vector: Vector,
+        forEachDo: (Position) -> Unit = {},
+        stopPredicate: (Position) -> Boolean): Position {
+    var lastPosition = startingPosition
+    while (true) {
+        val newPos = lastPosition.offsetOrNull(vector) ?: break
+        lastPosition = newPos
+        forEachDo(newPos)
+        if (stopPredicate(newPos))
+            break
+    }
+    return lastPosition
+}
+
+private fun checkBishopActivity(position: Position, state: State, opponentsActivity: OpponentsActivity) {
     bishopMoveVectors
             .forEach { vector ->
-                scan(position, vector, kingPosition, state, opponentsActivity)
+                scan(position, vector, state, opponentsActivity)
             }
 }
 
@@ -365,11 +272,11 @@ private fun genPseudoMovesByVector(position: Position, vector: Vector, state: St
             is Square.Occupied -> {
                 endReached = true
                 if (square.piece.color != state.nextMoveColor) {
-                    moves += Move.Capture(from = position, to = newPos)
+                    moves += Move(from = position, to = newPos)
                 }
             }
             is Square.Empty -> {
-                moves += Move.ToEmptySquare(from = position, to = newPos)
+                moves += Move(from = position, to = newPos)
             }
         }
         lastPos = newPos
@@ -380,27 +287,20 @@ private fun genBishopPseudoMoves(position: Position, state: State, moves: Mutabl
     bishopMoveVectors.forEach { vector -> genPseudoMovesByVector(position, vector, state, moves) }
 }
 
-private fun checkKnightActivity(position: Position, kingPosition: Position, opponentsActivity: OpponentsActivity) {
-    knightMoveVectors.forEach { vector -> checkOpponentMove(position, vector, kingPosition, opponentsActivity) }
+private fun checkKnightActivity(position: Position, state: State, opponentsActivity: OpponentsActivity) {
+    knightMoveVectors.forEach { vector -> checkOpponentMove(position, vector, state, opponentsActivity) }
 }
 
 private fun genKnightPseudoMoves(position: Position, state: State, moves: MutableList<Move>) {
     knightMoveVectors.forEach { vector ->
-        val newPos = position.offsetOrNull(vector)
-        if (newPos != null) {
-            newPos.asCaptureOrMoveToEmptySquareOrNull(state, position)
-                    ?.let { moves += it }
-        }
+        toMoveOrNull(position, vector, state)
+                ?.let { moves += it }
     }
 }
 
-
-private fun checkRootActivity(position: Position,
-                              state: State,
-                              kingPosition: Position,
-                              opponentsActivity: OpponentsActivity) {
+private fun checkRootActivity(position: Position, state: State, opponentsActivity: OpponentsActivity) {
     rookMoveVectors.forEach { vector ->
-        scan(position, vector, kingPosition, state, opponentsActivity)
+        scan(position, vector, state, opponentsActivity)
     }
 }
 
@@ -408,10 +308,9 @@ private fun genRookPseudoMoves(position: Position, state: State, moves: MutableL
     rookMoveVectors.forEach { vector -> genPseudoMovesByVector(position, vector, state, moves) }
 }
 
-private fun checkQueenActivity(position: Position, state: State, kingPosition: Position,
-                               opponentsActivity: OpponentsActivity) {
+private fun checkQueenActivity(position: Position, state: State, opponentsActivity: OpponentsActivity) {
     allDirectionsVectors.forEach { vector ->
-        scan(position, vector, kingPosition, state, opponentsActivity)
+        scan(position, vector, state, opponentsActivity)
     }
 }
 
@@ -434,27 +333,24 @@ private fun genKingPseudoMoves(position: Position, state: State, moves: MutableL
     val color = state.nextMoveColor
     val kingSideVector = color.kingSideVector
     position.offsetOrNull(kingSideVector)
-            ?.takeIf { state.colorToCastlingOptions[color].contains(Castling.KingSide) }
+            ?.takeIf { state.castlingOptions[color].contains(Castling.KingSide) }
             ?.takeIf { newRookPosition -> state.squares.byPosition(newRookPosition) == Square.Empty }
             ?.offsetOrNull(kingSideVector)
             ?.takeIf { newKingPosition -> state.squares.byPosition(newKingPosition) == Square.Empty }
-            ?.let { newPos -> Move.Castling.KingSide(from = position, to = newPos) }
+            ?.let { newPos -> Move(from = position, to = newPos) }
             ?.let { moves += it }
     val queenSideVector = color.queenSideVector
     position.offsetOrNull(queenSideVector)
-            ?.takeIf { state.colorToCastlingOptions[color].contains(Castling.QueenSide) }
+            ?.takeIf { state.castlingOptions[color].contains(Castling.QueenSide) }
             ?.takeIf { newRookPosition -> state.squares.byPosition(newRookPosition) == Square.Empty }
             ?.offsetOrNull(queenSideVector)
             ?.takeIf { newKingPosition -> state.squares.byPosition(newKingPosition) == Square.Empty }
-            ?.let { newPos -> Move.Castling.QueenSide(from = position, to = newPos) }
+            ?.let { newPos -> Move(from = position, to = newPos) }
             ?.let { moves += it }
     allDirectionsVectors
             .forEach { vector ->
-                val newPos = position.offsetOrNull(vector)
-                if (newPos != null) {
-                    newPos.asCaptureOrMoveToEmptySquareOrNull(state = state, startingPosition = position)
-                            ?.let { moves += it }
-                }
+                toMoveOrNull(position, vector, state)
+                        ?.let { moves += it }
             }
 }
 

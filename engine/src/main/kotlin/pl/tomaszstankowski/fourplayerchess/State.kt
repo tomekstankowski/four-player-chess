@@ -13,7 +13,7 @@ import pl.tomaszstankowski.fourplayerchess.Color.*
 import pl.tomaszstankowski.fourplayerchess.PieceType.*
 
 enum class Color {
-    Red, Blue, Green, Yellow
+    Red, Blue, Yellow, Green
 }
 
 enum class Castling {
@@ -85,10 +85,7 @@ data class Position internal constructor(val file: Int, val rank: Int) {
         }
     }
 
-    fun offset(fileOffset: Int = 0, rankOffset: Int = 0): Position =
-            offsetOrNull(fileOffset, rankOffset) ?: throw illegalPositionException(fileOffset, rankOffset)
-
-    fun offsetOrNull(fileOffset: Int = 0, rankOffset: Int = 0): Position? {
+    private fun offsetOrNull(fileOffset: Int = 0, rankOffset: Int = 0): Position? {
         val newFile = file + fileOffset
         val newRank = rank + rankOffset
         if (newFile in 0 until BOARD_SIZE && newRank in 0 until BOARD_SIZE)
@@ -96,14 +93,14 @@ data class Position internal constructor(val file: Int, val rank: Int) {
         return null
     }
 
-    fun offset(vector: Pair<Int, Int>): Position =
-            offsetOrNull(vector) ?: throw illegalPositionException(vector.first, vector.second)
+    fun offset(vector: Vector, factor: Int = 1): Position =
+            offsetOrNull(vector, factor) ?: throw illegalPositionException(vector.first, vector.second)
 
-    fun offsetOrNull(vector: Pair<Int, Int>): Position? {
-        val (fileOffset, rankOffset) = vector
+    fun offsetOrNull(vector: Vector, factor: Int = 1): Position? {
+        val fileOffset = vector.first * factor
+        val rankOffset = vector.second * factor
         return offsetOrNull(fileOffset, rankOffset)
     }
-
 
     override fun toString() = "($file,$rank)"
 
@@ -118,9 +115,9 @@ sealed class Square {
 
         companion object {
 
-            private val squares = Array<Array<Square.Occupied>>(PieceType.values().size) { i ->
+            private val squares = Array(PieceType.values().size) { i ->
                 Array(Color.values().size) { j ->
-                    Square.Occupied(
+                    Occupied(
                             Piece(
                                     type = PieceType.values()[i],
                                     color = Color.values()[j]
@@ -129,17 +126,17 @@ sealed class Square {
                 }
             }
 
-            fun by(color: Color, pieceType: PieceType): Square.Occupied = squares[pieceType.ordinal][color.ordinal]
+            fun by(color: Color, pieceType: PieceType): Occupied = squares[pieceType.ordinal][color.ordinal]
         }
     }
 
-    object Empty : Square()
+    object Empty : Square() {
+
+        override fun toString(): String {
+            return "Empty"
+        }
+    }
 }
-
-internal fun squareOf(color: Color, pieceType: PieceType) =
-        Square.Occupied.by(color, pieceType)
-
-internal fun emptySquare() = Square.Empty
 
 typealias Row = List<Square>
 
@@ -170,9 +167,10 @@ sealed class ParseStateFromFenResult {
 
 data class State(
         val squares: Board,
+        val eliminatedColors: Set<Color>,
         val nextMoveColor: Color,
         val enPassantSquares: EnPassantSquares,
-        val colorToCastlingOptions: CastlingOptions,
+        val castlingOptions: CastlingOptions,
         val plyCount: PlyCount
 ) {
 
@@ -207,9 +205,10 @@ data class State(
                                 listOf(emptySquare(), emptySquare(), emptySquare(), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), emptySquare(), emptySquare(), emptySquare()),
                                 listOf(emptySquare(), emptySquare(), emptySquare(), squareOf(Yellow, Rook), squareOf(Yellow, Knight), squareOf(Yellow, Bishop), squareOf(Yellow, King), squareOf(Yellow, Queen), squareOf(Yellow, Bishop), squareOf(Yellow, Knight), squareOf(Yellow, Rook), emptySquare(), emptySquare(), emptySquare())
                         ),
+                        eliminatedColors = emptySet(),
                         nextMoveColor = Red,
                         enPassantSquares = emptyMap(),
-                        colorToCastlingOptions = CastlingOptions.default(),
+                        castlingOptions = CastlingOptions.default(),
                         plyCount = PlyCount.of(0)
                 )
 

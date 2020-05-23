@@ -102,12 +102,12 @@ internal object FenGrammar : Grammar<State>() {
     private val pFalse = zero asJust false
     private val pFlag = pTrue or pFalse
     private val pComma = skip(comma)
-    private val pFlags = pFlag and pComma and pFlag and pComma and pFlag and pComma and pFlag map { (isRed, isGreen, isBlue, isYellow) ->
+    private val pFlags = pFlag and pComma and pFlag and pComma and pFlag and pComma and pFlag map { (isRed, isBlue, isYellow, isGreen) ->
         mapOf(
                 Color.Red to isRed,
-                Color.Green to isGreen,
                 Color.Blue to isBlue,
-                Color.Yellow to isYellow
+                Color.Yellow to isYellow,
+                Color.Green to isGreen
         )
     }
 
@@ -208,9 +208,10 @@ internal object FenGrammar : Grammar<State>() {
             pBoard map { (nextMoveColor, eliminatedColorsFlags, kingSideCastlingFlags, queenSideCastlingFlags, enPassantSquares, plyCount, board) ->
         State(
                 squares = board,
+                eliminatedColors = eliminatedColorsFlags.filterValues { isEliminated -> isEliminated }.keys,
                 nextMoveColor = nextMoveColor,
                 plyCount = plyCount,
-                colorToCastlingOptions = CastlingOptions(
+                castlingOptions = CastlingOptions(
                         Color.values().map { color ->
                             val kingSide = kingSideCastlingFlags[color]
                                     ?.takeIf { canCastle -> canCastle }
