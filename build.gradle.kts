@@ -2,6 +2,9 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.3.61"
+    id("org.springframework.boot") version "2.2.4.RELEASE"
+    id("io.spring.dependency-management") version "1.0.9.RELEASE"
+    kotlin("plugin.spring") version "1.3.61"
 }
 
 group = "pl.tomaszstankowski"
@@ -18,21 +21,14 @@ allprojects {
     }
 
     dependencies {
-        val spekVersion = "2.0.9"
-        val kluentVersion = "1.60"
-
         implementation("org.jetbrains.kotlin:kotlin-reflect")
         implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-
-        testImplementation("org.spekframework.spek2:spek-dsl-jvm:$spekVersion")
-        testRuntimeOnly("org.spekframework.spek2:spek-runner-junit5:$spekVersion")
-        testImplementation("org.amshove.kluent:kluent:$kluentVersion")
     }
 
-    tasks.withType<Test> {
-        useJUnitPlatform {
-            includeEngines = setOf("spek2")
-        }
+    ext {
+        set("spekVersion", "2.0.9")
+        set("kluentVersion", "1.60")
+        set("valiktorVersion", "0.11.0")
     }
 
     tasks.withType<KotlinCompile> {

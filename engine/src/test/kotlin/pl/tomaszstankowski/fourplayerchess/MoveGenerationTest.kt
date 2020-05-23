@@ -2,7 +2,8 @@ package pl.tomaszstankowski.fourplayerchess
 
 import org.amshove.kluent.shouldBeEqualTo
 import org.spekframework.spek2.Spek
-import pl.tomaszstankowski.fourplayerchess.PieceType.*
+import pl.tomaszstankowski.fourplayerchess.engine.*
+import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
 
 class MoveGenerationTest : Spek({
 

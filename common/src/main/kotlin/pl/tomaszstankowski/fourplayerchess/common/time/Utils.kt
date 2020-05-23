@@ -1,7 +1,10 @@
 package pl.tomaszstankowski.fourplayerchess.common.time
 
-import java.time.Clock
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 
-fun fixedClock(): Clock = Clock.fixed(Instant.parse("2020-01-31T20:10:01.282957Z"), ZoneId.of("UTC"))
+fun Instant.toLocalDateTimeAtUTC(): LocalDateTime = LocalDateTime.ofInstant(this, ZoneId.of("UTC"))
+
+fun LocalDateTime.toInstantAtUTC(): Instant = this.toInstant(ZoneOffset.UTC)

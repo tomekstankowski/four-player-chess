@@ -1,13 +1,11 @@
-plugins {
-    id("org.springframework.boot") version "2.2.4.RELEASE"
-    id("io.spring.dependency-management") version "1.0.9.RELEASE"
-    kotlin("plugin.spring") version "1.3.61"
-}
+apply(plugin = "org.springframework.boot")
+apply(plugin = "io.spring.dependency-management")
+apply(plugin = "kotlin-spring")
 
 dependencies {
     val postgreSQL = "42.2.6"
     val testContainers = "1.12.2"
-    implementation(project(":lobby"))
+    implementation(project(":matchmaking"))
     implementation(project(":common"))
 
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")

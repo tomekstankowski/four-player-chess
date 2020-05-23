@@ -2,7 +2,8 @@ package pl.tomaszstankowski.fourplayerchess
 
 import org.amshove.kluent.shouldBeEqualTo
 import org.spekframework.spek2.Spek
-import pl.tomaszstankowski.fourplayerchess.Color.Yellow
+import pl.tomaszstankowski.fourplayerchess.engine.Color.Yellow
+import pl.tomaszstankowski.fourplayerchess.engine.Position
 
 class MoveMakeTest : Spek({
 

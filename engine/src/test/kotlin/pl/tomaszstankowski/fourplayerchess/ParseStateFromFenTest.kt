@@ -2,10 +2,11 @@ package pl.tomaszstankowski.fourplayerchess
 
 import org.amshove.kluent.shouldBeEqualTo
 import org.spekframework.spek2.Spek
-import pl.tomaszstankowski.fourplayerchess.Castling.KingSide
-import pl.tomaszstankowski.fourplayerchess.Castling.QueenSide
-import pl.tomaszstankowski.fourplayerchess.Color.*
-import pl.tomaszstankowski.fourplayerchess.PieceType.*
+import pl.tomaszstankowski.fourplayerchess.engine.*
+import pl.tomaszstankowski.fourplayerchess.engine.Castling.KingSide
+import pl.tomaszstankowski.fourplayerchess.engine.Castling.QueenSide
+import pl.tomaszstankowski.fourplayerchess.engine.Color.*
+import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
 
 class ParseStateFromFenTest : Spek({
 
