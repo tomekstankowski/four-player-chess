@@ -3,8 +3,8 @@ package pl.tomaszstankowski.fourplayerchess.matchmaking.data
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert
-import pl.tomaszstankowski.fourplayerchess.common.time.toInstantAtUTC
-import pl.tomaszstankowski.fourplayerchess.common.time.toLocalDateTimeAtUTC
+import pl.tomaszstankowski.fourplayerchess.common.utils.toInstantAtUTC
+import pl.tomaszstankowski.fourplayerchess.common.utils.toLocalDateTimeAtUTC
 import pl.tomaszstankowski.fourplayerchess.matchmaking.Lobby
 import pl.tomaszstankowski.fourplayerchess.matchmaking.LobbyRepository
 import pl.tomaszstankowski.fourplayerchess.matchmaking.data.LobbyTable.Columns.CREATED_AT

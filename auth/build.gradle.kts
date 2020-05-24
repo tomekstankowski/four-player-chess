@@ -7,13 +7,16 @@ apply(plugin = "io.spring.dependency-management")
 
 val spekVersion: String? by ext
 val kluentVersion: String? by ext
-val valiktorVersion: String by ext
+val jjwtVersion = "0.11.1"
 
 dependencies {
     implementation(project(":common"))
 
-    implementation("org.springframework.boot:spring-boot-starter-jdbc")
-    implementation("org.valiktor:valiktor-core:$valiktorVersion")
+    implementation("org.springframework.boot:spring-boot-starter")
+
+    implementation("io.jsonwebtoken:jjwt-api:$jjwtVersion")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:$jjwtVersion")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:$jjwtVersion")
 
     testImplementation("org.spekframework.spek2:spek-dsl-jvm:$spekVersion")
     testRuntimeOnly("org.spekframework.spek2:spek-runner-junit5:$spekVersion")

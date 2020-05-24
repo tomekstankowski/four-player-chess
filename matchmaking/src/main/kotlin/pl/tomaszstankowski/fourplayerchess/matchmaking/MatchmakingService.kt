@@ -1,10 +1,15 @@
 package pl.tomaszstankowski.fourplayerchess.matchmaking
 
+import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionOperations
+import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.util.IdGenerator
+import org.springframework.util.JdkIdGenerator
+import pl.tomaszstankowski.fourplayerchess.matchmaking.data.JdbcLobbyRepository
 import java.time.Clock
 import java.time.Instant
 import java.util.*
+import javax.sql.DataSource
 
 class MatchmakingService internal constructor(
         private val clock: Clock,
@@ -14,6 +19,15 @@ class MatchmakingService internal constructor(
 ) {
 
     companion object {
+        fun create(clock: Clock,
+                   dataSource: DataSource,
+                   transactionManager: PlatformTransactionManager) =
+                create(
+                        clock = clock,
+                        idGenerator = JdkIdGenerator(),
+                        lobbyRepository = JdbcLobbyRepository(dataSource),
+                        transactionOperations = TransactionTemplate(transactionManager)
+                )
 
         internal fun create(
                 clock: Clock,

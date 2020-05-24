@@ -3,8 +3,10 @@ package pl.tomaszstankowski.fourplayerchess
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType.APPLICATION_JSON
+import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.web.servlet.*
 
+@WithMockUser(username = "d1328f2b-9813-43b6-899f-d234ebebbbbb")
 class LobbyIntegrationTest : IntegrationTest() {
 
     @Autowired
@@ -22,38 +24,38 @@ class LobbyIntegrationTest : IntegrationTest() {
             contentType = APPLICATION_JSON
             content = json
         }
-            .andExpect {
-                status { isCreated }
-                jsonPath("id") { isString }
-                jsonPath("name") { value(NewLobby.NAME) }
-                jsonPath("createdAt") { isString }
-            }
+                .andExpect {
+                    status { isCreated }
+                    jsonPath("id") { isString }
+                    jsonPath("name") { value(NewLobby.NAME) }
+                    jsonPath("createdAt") { isString }
+                }
     }
 
     @Test
     fun `can get lobby`() {
         mockMvc.get("/lobbies/{id}", FirstLobby.ID)
-            .andExpect {
-                status { isOk }
-                jsonPath("id") { value(FirstLobby.ID) }
-                jsonPath("name") { value(FirstLobby.NAME) }
-                jsonPath("createdAt") { value(FirstLobby.CREATED_AT) }
-            }
+                .andExpect {
+                    status { isOk }
+                    jsonPath("id") { value(FirstLobby.ID) }
+                    jsonPath("name") { value(FirstLobby.NAME) }
+                    jsonPath("createdAt") { value(FirstLobby.CREATED_AT) }
+                }
     }
 
     @Test
     fun `can get all lobbies`() {
         mockMvc.get("/lobbies")
-            .andExpect {
-                status { isOk }
-                jsonPath("[0].id") { value(FirstLobby.ID) }
-                jsonPath("[0].name") { value(FirstLobby.NAME) }
-                jsonPath("[0].createdAt") { value(FirstLobby.CREATED_AT) }
+                .andExpect {
+                    status { isOk }
+                    jsonPath("[0].id") { value(FirstLobby.ID) }
+                    jsonPath("[0].name") { value(FirstLobby.NAME) }
+                    jsonPath("[0].createdAt") { value(FirstLobby.CREATED_AT) }
 
-                jsonPath("[1].id") { value(SecondLobby.ID) }
-                jsonPath("[1].name") { value(SecondLobby.NAME) }
-                jsonPath("[1].createdAt") { value(SecondLobby.CREATED_AT) }
-            }
+                    jsonPath("[1].id") { value(SecondLobby.ID) }
+                    jsonPath("[1].name") { value(SecondLobby.NAME) }
+                    jsonPath("[1].createdAt") { value(SecondLobby.CREATED_AT) }
+                }
     }
 
     @Test
@@ -68,20 +70,20 @@ class LobbyIntegrationTest : IntegrationTest() {
             contentType = APPLICATION_JSON
             content = json
         }
-            .andExpect {
-                status { isOk }
-                jsonPath("id") { value(FirstLobby.ID) }
-                jsonPath("name") { value(NewLobby.NAME) }
-                jsonPath("createdAt") { value(FirstLobby.CREATED_AT) }
-            }
+                .andExpect {
+                    status { isOk }
+                    jsonPath("id") { value(FirstLobby.ID) }
+                    jsonPath("name") { value(NewLobby.NAME) }
+                    jsonPath("createdAt") { value(FirstLobby.CREATED_AT) }
+                }
     }
 
     @Test
     fun `can delete lobby`() {
         mockMvc.delete("/lobbies/{id}", FirstLobby.ID)
-            .andExpect { status { isOk } }
+                .andExpect { status { isOk } }
         mockMvc.get("/lobbies/{id}", FirstLobby.ID)
-            .andExpect { status { isNotFound } }
+                .andExpect { status { isNotFound } }
     }
 }
 

@@ -1,2 +1,2 @@
 rootProject.name = "fourplayerchess"
-include("app", "matchmaking", "common", "engine")
+include("app", "auth", "matchmaking", "common", "engine")
