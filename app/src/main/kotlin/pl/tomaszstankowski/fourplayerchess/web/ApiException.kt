@@ -20,7 +20,7 @@ class ApiException private constructor(
                 )
         )
 
-        fun unprocessableEntity(message: String, data: Map<String, Any?>) = ApiException(
+        fun unprocessableEntity(message: String, data: Map<String, Any?> = emptyMap()) = ApiException(
                 message = message,
                 httpStatus = HttpStatus.UNPROCESSABLE_ENTITY,
                 data = data
@@ -33,6 +33,12 @@ class ApiException private constructor(
                         "cause" to "INVALID_BODY",
                         "errors" to errors.map { it.toMap() }
                 )
+        )
+
+        fun forbidden(message: String) = ApiException(
+                message = message,
+                httpStatus = HttpStatus.FORBIDDEN,
+                data = emptyMap()
         )
 
         fun internalServerError() = ApiException(

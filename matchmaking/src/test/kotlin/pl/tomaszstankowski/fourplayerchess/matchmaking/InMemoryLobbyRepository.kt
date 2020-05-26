@@ -15,10 +15,14 @@ internal class InMemoryLobbyRepository(private val dataSource: InMemoryDataSourc
 
     override fun findAll(): List<Lobby> = dataSource.lobbies
 
-    override fun update(lobby: Lobby) {
+    override fun updateIfVersionEquals(lobby: Lobby, version: Int): Boolean {
         val index = dataSource.lobbies.indexOfFirst { it.id == lobby.id }
         check(index != -1)
+        if (dataSource.lobbies[index].version != version) {
+            return false
+        }
         dataSource.lobbies[index] = lobby
+        return true
     }
 
     override fun delete(id: UUID) {

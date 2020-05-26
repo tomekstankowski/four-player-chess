@@ -12,7 +12,7 @@ internal interface LobbyRepository {
 
     fun findAll(): List<Lobby>
 
-    fun update(lobby: Lobby)
+    fun updateIfVersionEquals(lobby: Lobby, version: Int): Boolean
 
     fun delete(id: UUID)
 

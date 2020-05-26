@@ -11,6 +11,7 @@ val valiktorVersion: String by ext
 
 dependencies {
     implementation(project(":common"))
+    implementation(project(":data"))
 
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("org.valiktor:valiktor-core:$valiktorVersion")
