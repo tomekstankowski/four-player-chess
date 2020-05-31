@@ -121,9 +121,9 @@ internal fun Position.isOnLineBetween(a: Position, b: Position): Boolean {
 internal fun Position.isPawnStartingPositionForColor(color: Color) =
         when (color) {
             Red -> rank == 1
-            Green -> rank == BOARD_SIZE - 2
+            Green -> file == BOARD_SIZE - 2
             Blue -> file == 1
-            Yellow -> file == BOARD_SIZE - 2
+            Yellow -> rank == BOARD_SIZE - 2
         }
 
 internal fun Move.isPawnPromotion(state: State): Boolean {
