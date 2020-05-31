@@ -192,7 +192,10 @@ private fun genPawnPseudoMoves(position: Position, state: State, moves: MutableL
                         ?.let { Move(from = position, to = it) }
                         ?.let { moves += it }
 
-                capturePos.takeIf { state.enPassantSquares.containsValue(it) }
+                capturePos.takeIf {
+                    state.enPassantSquares.containsValue(it)
+                            && state.enPassantSquares[state.nextMoveColor] != it
+                }
                         ?.let { pos -> Move(from = position, to = pos) }
                         ?.let { moves += it }
             }
