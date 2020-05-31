@@ -74,6 +74,12 @@ data class Position internal constructor(val file: Int, val rank: Int) {
                     else -> throw IllegalArgumentException("Invalid position string: $result")
                 }
 
+        fun parseOrNull(str: String): Position? =
+                when (val result = PositionGrammar.tryParseToEnd(str)) {
+                    is Parsed -> result.value
+                    else -> null
+                }
+
         private object PositionGrammar : Grammar<Position>() {
             private val file by token("[a-n]")
             private val rank by token("1[0-4]|[1-9]")
@@ -105,7 +111,7 @@ data class Position internal constructor(val file: Int, val rank: Int) {
 
     override fun toString() = "($file,$rank)"
 
-    fun toHumanReadableString() = "(${file.inc().toChar()},${rank.inc()})"
+    fun toHumanReadableString() = "${'a' + file}${rank.inc()}"
 
 }
 
@@ -139,12 +145,12 @@ sealed class Square {
     }
 }
 
-typealias Row = List<Square>
+typealias Row = List<Square?>
 
 typealias Board = List<Row>
 
 fun Board.byPosition(position: Position): Square =
-        this[position.rank][position.file]
+        this[position.rank][position.file]!!
 
 data class PlyCount internal constructor(val count: Int) {
 
@@ -191,9 +197,9 @@ data class State(
         fun starting(): State =
                 State(
                         squares = listOf(
-                                listOf(emptySquare(), emptySquare(), emptySquare(), squareOf(Red, Rook), squareOf(Red, Knight), squareOf(Red, Bishop), squareOf(Red, Queen), squareOf(Red, King), squareOf(Red, Bishop), squareOf(Red, Knight), squareOf(Red, Rook), emptySquare(), emptySquare(), emptySquare()),
-                                listOf(emptySquare(), emptySquare(), emptySquare(), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), emptySquare(), emptySquare(), emptySquare()),
-                                listOf<Square>(emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare()),
+                                listOf(null, null, null, squareOf(Red, Rook), squareOf(Red, Knight), squareOf(Red, Bishop), squareOf(Red, Queen), squareOf(Red, King), squareOf(Red, Bishop), squareOf(Red, Knight), squareOf(Red, Rook), null, null, null),
+                                listOf(null, null, null, squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), null, null, null),
+                                listOf<Square?>(null, null, null, emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), null, null, null),
                                 listOf(squareOf(Blue, Rook), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Rook)),
                                 listOf(squareOf(Blue, Knight), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Knight)),
                                 listOf(squareOf(Blue, Bishop), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Bishop)),
@@ -202,9 +208,9 @@ data class State(
                                 listOf(squareOf(Blue, Bishop), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Bishop)),
                                 listOf(squareOf(Blue, Knight), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Knight)),
                                 listOf(squareOf(Blue, Rook), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Rook)),
-                                listOf<Square>(emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare()),
-                                listOf(emptySquare(), emptySquare(), emptySquare(), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), emptySquare(), emptySquare(), emptySquare()),
-                                listOf(emptySquare(), emptySquare(), emptySquare(), squareOf(Yellow, Rook), squareOf(Yellow, Knight), squareOf(Yellow, Bishop), squareOf(Yellow, King), squareOf(Yellow, Queen), squareOf(Yellow, Bishop), squareOf(Yellow, Knight), squareOf(Yellow, Rook), emptySquare(), emptySquare(), emptySquare())
+                                listOf<Square?>(null, null, null, emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), null, null, null),
+                                listOf(null, null, null, squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), null, null, null),
+                                listOf(null, null, null, squareOf(Yellow, Rook), squareOf(Yellow, Knight), squareOf(Yellow, Bishop), squareOf(Yellow, King), squareOf(Yellow, Queen), squareOf(Yellow, Bishop), squareOf(Yellow, Knight), squareOf(Yellow, Rook), null, null, null)
                         ),
                         eliminatedColors = emptySet(),
                         nextMoveColor = Red,

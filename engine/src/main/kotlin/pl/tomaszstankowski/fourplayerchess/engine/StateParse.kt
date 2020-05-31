@@ -168,6 +168,24 @@ internal object FenGrammar : Grammar<State>() {
     }
     private val pRowsUnchecked = BOARD_SIZE - 1 times (pRow and skip(slash) and skipWhiteSpaceOpt) and (
             pRow and skipWhiteSpaceOpt) map { (rows, row) -> rows.plus<Row>(row).reversed() }
+
+    private fun Board.withDisabledSquaresRemoved() =
+            mapIndexed { rowIndex, row ->
+                if (rowIndex in 0 until DISABLED_AREA_SIZE
+                        || rowIndex in BOARD_SIZE - DISABLED_AREA_SIZE until BOARD_SIZE) {
+                    row.mapIndexed { columnIndex, square ->
+                        if (columnIndex in 0 until DISABLED_AREA_SIZE
+                                || columnIndex in BOARD_SIZE - DISABLED_AREA_SIZE until BOARD_SIZE) {
+                            null
+                        } else {
+                            square
+                        }
+                    }
+                } else {
+                    row
+                }
+            }
+
     private val pBoard = object : Parser<Board> {
         override fun tryParse(tokens: Sequence<TokenMatch>): ParseResult<Board> {
             when (val result = pRowsUnchecked.tryParse(tokens)) {
@@ -193,7 +211,8 @@ internal object FenGrammar : Grammar<State>() {
                     if (colorOfPiecesWithoutKing != null) {
                         return PiecesWithoutKing(colorOfPiecesWithoutKing)
                     }
-                    return Parsed(result.value, result.remainder)
+                    val withDisabledSquaresRemoved = result.value.withDisabledSquaresRemoved()
+                    return Parsed(withDisabledSquaresRemoved, result.remainder)
                 }
                 is ErrorResult -> return result
             }
