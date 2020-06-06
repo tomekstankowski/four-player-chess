@@ -3,6 +3,10 @@ package pl.tomaszstankowski.fourplayerchess
 import org.amshove.kluent.shouldBeEqualTo
 import org.spekframework.spek2.Spek
 import pl.tomaszstankowski.fourplayerchess.engine.Color.Yellow
+import pl.tomaszstankowski.fourplayerchess.engine.Move
+import pl.tomaszstankowski.fourplayerchess.engine.MoveClaim
+import pl.tomaszstankowski.fourplayerchess.engine.PieceType.Knight
+import pl.tomaszstankowski.fourplayerchess.engine.PieceType.Queen
 import pl.tomaszstankowski.fourplayerchess.engine.Position
 
 class MoveMakeTest : Spek({
@@ -26,7 +30,7 @@ class MoveMakeTest : Spek({
             3,rR,rN,rB,rQ,rK,rB,rN,rR,3
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("i1"), to = Position.parse("f4"))
+        val newState = engine.getStateAfterMove("i1", "f4")
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-4-
@@ -66,7 +70,7 @@ class MoveMakeTest : Spek({
             3,rR,rN,rB,rQ,rK,rB,rN,rR,3
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("i1"), to = Position.parse("b8"))
+        val newState = engine.getStateAfterMove("i1", "b8")
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-0-
@@ -106,7 +110,7 @@ class MoveMakeTest : Spek({
             3,rR,rN,rB,rQ,rK,rB,rN,rR,3
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("g2"), to = Position.parse("g4"))
+        val newState = engine.getStateAfterMove("g2", "g4")
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-1,1,1,1-g3,0,0,0-0-
@@ -146,7 +150,12 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("i7"), to = Position.parse("i8"))
+        val (newState, _) = engine.makeMove(
+                MoveClaim.PromotionMoveClaim.getOrNull(
+                        move = Move(from = Position.parse("i7"), to = Position.parse("i8")),
+                        pieceType = Knight
+                )!!
+        )!!
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
@@ -156,7 +165,7 @@ class MoveMakeTest : Spek({
             6,bR,1,yP,1,yB,2,gR/
             12,gP,1/
             3,bK,bP,7,gP,gB/
-            4,bP,3,rQ,2,gB,2/
+            4,bP,3,rN,2,gB,2/
             9,rP,1,gP,1,gK/
             8,rN,rK,2,gP,gN/
             10,rB,1,gP,1/
@@ -165,6 +174,63 @@ class MoveMakeTest : Spek({
             14/
             14
         """.trimIndent())
+    }
+
+    test("piece type must be given when move is pawn promotion") {
+        val engine = createEngineWithStateFromFen("""
+            R-0,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            5,yP,yK,yB,6/
+            6,yP,7/
+            6,bR,1,yP,1,yB,2,gR/
+            12,gP,1/
+            3,bK,bP,7,gP,gB/
+            4,bP,6,gB,2/
+            8,rP,rP,1,gP,1,gK/
+            8,rN,rK,2,gP,gN/
+            10,rB,1,gP,1/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        val result = engine.makeMove(
+                MoveClaim.RegularMoveClaim(
+                        move = Move(from = Position.parse("i7"), to = Position.parse("i8"))
+                )
+        )
+
+        result shouldBeEqualTo null
+    }
+
+    test("must not request pawn promotion when move is not promotion") {
+        val engine = createEngineWithStateFromFen("""
+            R-0,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            5,yP,yK,yB,6/
+            6,yP,7/
+            6,bR,1,yP,1,yB,2,gR/
+            12,gP,1/
+            3,bK,bP,7,gP,gB/
+            4,bP,6,gB,2/
+            9,rP,1,gP,1,gK/
+            7,rP,rN,rK,2,gP,gN/
+            10,rB,1,gP,1/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        val result = engine.makeMove(
+                MoveClaim.PromotionMoveClaim.getOrNull(
+                        move = Move(from = Position.parse("h6"), to = Position.parse("h7")),
+                        pieceType = Queen
+                )!!
+        )
+
+        result shouldBeEqualTo null
     }
 
     test("king side castle") {
@@ -186,7 +252,7 @@ class MoveMakeTest : Spek({
             3,rR,rN,rB,rQ,rK,2,rR,3
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("h1"), to = Position.parse("j1"))
+        val newState = engine.getStateAfterMove("h1", "j1")
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-0,1,1,1-0,1,1,1-0,0,0,0-1-
@@ -226,7 +292,7 @@ class MoveMakeTest : Spek({
             3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("h1"), to = Position.parse("f1"))
+        val newState = engine.getStateAfterMove("h1", "f1")
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-0,1,1,1-0,1,1,1-0,0,0,0-1-
@@ -266,7 +332,7 @@ class MoveMakeTest : Spek({
             3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("h1"), to = Position.parse("g1"))
+        val newState = engine.getStateAfterMove("h1", "g1")
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-0,1,1,1-0,1,1,1-0,0,0,0-1-
@@ -306,7 +372,7 @@ class MoveMakeTest : Spek({
             3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("d1"), to = Position.parse("e1"))
+        val newState = engine.getStateAfterMove("d1", "e1")
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-0,1,1,1-0,0,0,0-1-
@@ -346,7 +412,7 @@ class MoveMakeTest : Spek({
             3,rR,rN,rB,rQ,rK,rB,rN,rR,3
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("d4"), to = Position.parse("c5"))
+        val newState = engine.getStateAfterMove("d4", "c5")
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-0-
@@ -386,7 +452,7 @@ class MoveMakeTest : Spek({
             3,rR,rN,rB,rQ,rK,rB,rN,rR,3
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("e3"), to = Position.parse("d4"))
+        val newState = engine.getStateAfterMove("e3", "d4")
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-0-
@@ -426,7 +492,7 @@ class MoveMakeTest : Spek({
             3,rR,rN,rB,rQ,rK,rB,rN,rR,3
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("f1"), to = Position.parse("c4"))
+        val newState = engine.getStateAfterMove("f1", "c4")
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-3-
@@ -466,7 +532,7 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("h13"), to = Position.parse("j11"))
+        val newState = engine.getStateAfterMove("h13", "j11")
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-1,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-1-
@@ -506,7 +572,7 @@ class MoveMakeTest : Spek({
             7,rK,6
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("h4"), to = Position.parse("h3"))
+        val newState = engine.getStateAfterMove("h4", "h3")
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-1,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-5-
@@ -546,7 +612,7 @@ class MoveMakeTest : Spek({
             6,rK,7
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("g4"), to = Position.parse("g3"))
+        val newState = engine.getStateAfterMove("g4", "g3")
         engine.isDraw shouldBeEqualTo true
         engine.winningColor shouldBeEqualTo null
 
@@ -588,7 +654,7 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        val newState = engine.getStateAfterMove(from = Position.parse("m11"), to = Position.parse("n11"))
+        val newState = engine.getStateAfterMove("m11", "n11")
         engine.isDraw shouldBeEqualTo false
         engine.winningColor shouldBeEqualTo Yellow
 
@@ -630,17 +696,17 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove(from = Position.parse("k9"), to = Position.parse("k4"))
-        engine.makeMove(from = Position.parse("m5"), to = Position.parse("m4"))
-        engine.makeMove(from = Position.parse("k4"), to = Position.parse("n7"))
-        engine.makeMove(from = Position.parse("m4"), to = Position.parse("n5"))
-        engine.makeMove(from = Position.parse("n7"), to = Position.parse("k7"))
-        engine.makeMove(from = Position.parse("n5"), to = Position.parse("m5"))
-        engine.makeMove(from = Position.parse("k7"), to = Position.parse("k4"))
-        engine.makeMove(from = Position.parse("m5"), to = Position.parse("m4"))
-        engine.makeMove(from = Position.parse("k4"), to = Position.parse("k7"))
-        engine.makeMove(from = Position.parse("m4"), to = Position.parse("m5"))
-        engine.makeMove(from = Position.parse("k7"), to = Position.parse("k4"))
+        engine.makeMove("k9", "k4")
+        engine.makeMove("m5", "m4")
+        engine.makeMove("k4", "n7")
+        engine.makeMove("m4", "n5")
+        engine.makeMove("n7", "k7")
+        engine.makeMove("n5", "m5")
+        engine.makeMove("k7", "k4")
+        engine.makeMove("m5", "m4")
+        engine.makeMove("k4", "k7")
+        engine.makeMove("m4", "m5")
+        engine.makeMove("k7", "k4")
         engine.claimDraw()
 
         engine.isDraw shouldBeEqualTo true
@@ -666,19 +732,19 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove(from = Position.parse("k9"), to = Position.parse("k4"))
-        engine.makeMove(from = Position.parse("m5"), to = Position.parse("m4"))
-        engine.makeMove(from = Position.parse("k4"), to = Position.parse("n7"))
-        engine.makeMove(from = Position.parse("m4"), to = Position.parse("n5"))
-        engine.makeMove(from = Position.parse("n7"), to = Position.parse("k7"))
-        engine.makeMove(from = Position.parse("n5"), to = Position.parse("m5"))
-        engine.makeMove(from = Position.parse("k7"), to = Position.parse("k4"))
-        engine.makeMove(from = Position.parse("m5"), to = Position.parse("m4"))
-        engine.makeMove(from = Position.parse("k4"), to = Position.parse("k7"))
-        engine.makeMove(from = Position.parse("m4"), to = Position.parse("m5"))
-        engine.makeMove(from = Position.parse("k7"), to = Position.parse("k4"))
-        engine.makeMove(from = Position.parse("n4"), to = Position.parse("n5"))
-        engine.makeMove(from = Position.parse("k4"), to = Position.parse("n7"))
+        engine.makeMove("k9", "k4")
+        engine.makeMove("m5", "m4")
+        engine.makeMove("k4", "n7")
+        engine.makeMove("m4", "n5")
+        engine.makeMove("n7", "k7")
+        engine.makeMove("n5", "m5")
+        engine.makeMove("k7", "k4")
+        engine.makeMove("m5", "m4")
+        engine.makeMove("k4", "k7")
+        engine.makeMove("m4", "m5")
+        engine.makeMove("k7", "k4")
+        engine.makeMove("n4", "n5")
+        engine.makeMove("k4", "n7")
         engine.claimDraw()
 
         engine.isDraw shouldBeEqualTo true
@@ -704,7 +770,7 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove(from = Position.parse("j6"), to = Position.parse("k4"))
+        engine.makeMove("j6", "k4")
         engine.claimDraw()
 
         engine.isDraw shouldBeEqualTo true
@@ -730,9 +796,9 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove(from = Position.parse("j6"), to = Position.parse("k4"))
-        engine.makeMove(from = Position.parse("n4"), to = Position.parse("n5"))
-        engine.makeMove(from = Position.parse("k4"), to = Position.parse("l6"))
+        engine.makeMove("j6", "k4")
+        engine.makeMove("n4", "n5")
+        engine.makeMove("k4", "l6")
         engine.claimDraw()
 
         engine.isDraw shouldBeEqualTo true
@@ -758,16 +824,16 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove(from = Position.parse("k9"), to = Position.parse("k4"))
-        engine.makeMove(from = Position.parse("m5"), to = Position.parse("m4"))
-        engine.makeMove(from = Position.parse("k4"), to = Position.parse("n7"))
-        engine.makeMove(from = Position.parse("m4"), to = Position.parse("n5"))
-        engine.makeMove(from = Position.parse("n7"), to = Position.parse("k7"))
-        engine.makeMove(from = Position.parse("n5"), to = Position.parse("m5"))
-        engine.makeMove(from = Position.parse("k7"), to = Position.parse("k4"))
-        engine.makeMove(from = Position.parse("m5"), to = Position.parse("m4"))
-        engine.makeMove(from = Position.parse("k4"), to = Position.parse("k7"))
-        engine.makeMove(from = Position.parse("m4"), to = Position.parse("m5"))
+        engine.makeMove("k9", "k4")
+        engine.makeMove("m5", "m4")
+        engine.makeMove("k4", "n7")
+        engine.makeMove("m4", "n5")
+        engine.makeMove("n7", "k7")
+        engine.makeMove("n5", "m5")
+        engine.makeMove("k7", "k4")
+        engine.makeMove("m5", "m4")
+        engine.makeMove("k4", "k7")
+        engine.makeMove("m4", "m5")
         engine.claimDraw()
 
         engine.isDraw shouldBeEqualTo false

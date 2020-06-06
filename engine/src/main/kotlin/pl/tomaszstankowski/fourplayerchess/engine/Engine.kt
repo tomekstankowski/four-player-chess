@@ -1,5 +1,7 @@
 package pl.tomaszstankowski.fourplayerchess.engine
 
+import pl.tomaszstankowski.fourplayerchess.engine.MoveClaim.PromotionMoveClaim
+
 class Engine(state: State) {
     var state: State
         private set
@@ -44,10 +46,14 @@ class Engine(state: State) {
         return isDrawByClaim
     }
 
-    fun makeMove(from: Position, to: Position): Pair<State, StateFeatures>? {
-        val move = Move(from, to)
-        if (stateFeatures.legalMoves.contains(move)) {
-            val (newState, newStateFeatures) = makeMove(move, state)
+    fun makeMove(moveClaim: MoveClaim): Pair<State, StateFeatures>? {
+        val isValidMove = stateFeatures.legalMoves.any { move ->
+            move == moveClaim.move
+                    && (moveClaim !is PromotionMoveClaim || move.isPawnPromotion(state))
+                    && (!move.isPawnPromotion(state) || moveClaim is PromotionMoveClaim)
+        }
+        if (isValidMove) {
+            val (newState, newStateFeatures) = makeMove(moveClaim, state)
             state = newState
             stateFeatures = newStateFeatures
 

@@ -2,15 +2,16 @@ package pl.tomaszstankowski.fourplayerchess.engine
 
 import pl.tomaszstankowski.fourplayerchess.engine.Castling.KingSide
 import pl.tomaszstankowski.fourplayerchess.engine.Castling.QueenSide
+import pl.tomaszstankowski.fourplayerchess.engine.MoveClaim.PromotionMoveClaim
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
 
-internal fun makeMove(move: Move, state: State): Pair<State, StateFeatures> {
+internal fun makeMove(moveClaim: MoveClaim, state: State): Pair<State, StateFeatures> {
     val pseudoState = state.copy(
-            squares = getNewBoard(move, state),
+            squares = getNewBoard(moveClaim, state),
             nextMoveColor = getNewNextMoveColor(state),
-            enPassantSquares = getNewEnPassantSquares(move, state),
-            castlingOptions = getNewColorToCastlingOptions(move, state),
-            plyCount = getNewPlyCount(move, state)
+            enPassantSquares = getNewEnPassantSquares(moveClaim, state),
+            castlingOptions = getNewColorToCastlingOptions(moveClaim, state),
+            plyCount = getNewPlyCount(moveClaim, state)
     )
     return getLegalStateAndStateFeatures(pseudoState)
 }
@@ -33,7 +34,8 @@ private tailrec fun getLegalStateAndStateFeatures(state: State): Pair<State, Sta
     return state to stateFeatures
 }
 
-private fun getNewBoard(move: Move, state: State): Board {
+private fun getNewBoard(moveClaim: MoveClaim, state: State): Board {
+    val move = moveClaim.move
     val color = state.nextMoveColor
     return state.squares.withPieceMoved(move.from, move.to)
             .let { squares ->
@@ -67,8 +69,8 @@ private fun getNewBoard(move: Move, state: State): Board {
                 }
             }
             .let { squares ->
-                if (move.isPawnPromotion(state)) {
-                    squares.replaceSquareOnPosition(move.to, Square.Occupied.by(color, Queen))
+                if (moveClaim is PromotionMoveClaim) {
+                    squares.replaceSquareOnPosition(move.to, Square.Occupied.by(color, moveClaim.pieceType))
                 } else {
                     squares
                 }
@@ -98,64 +100,68 @@ private fun getNewNextMoveColor(state: State): Color {
     return getNewNextMoveColor(state.eliminatedColors, state.nextMoveColor)
 }
 
-private fun getNewNextMoveColor(eliminatedColors: Set<Color>, color: Color): Color {
+private tailrec fun getNewNextMoveColor(eliminatedColors: Set<Color>, color: Color): Color {
     val newColorIndex = (color.ordinal + 1) % Color.values().size
     val newColor = Color.values()[newColorIndex]
-    if (eliminatedColors.contains(newColor)) {
-        return getNewNextMoveColor(eliminatedColors, newColor)
+    if (!eliminatedColors.contains(newColor)) {
+        return newColor
     }
-    return newColor
+    return getNewNextMoveColor(eliminatedColors, newColor)
 }
 
-private fun getNewEnPassantSquares(move: Move, state: State): EnPassantSquares =
-        Color.values().mapNotNull { color ->
-            if (state.nextMoveColor == color) {
-                val square = state.squares.byPosition(move.from) as Square.Occupied
-                if (square.piece.type == Pawn && move.from.offset(color.pawnForwardVector, 2) == move.to) {
-                    val enPassantPosition = move.from.offset(color.pawnForwardVector)
-                    color to enPassantPosition
-                } else {
-                    null
-                }
+private fun getNewEnPassantSquares(moveClaim: MoveClaim, state: State): EnPassantSquares {
+    val move = moveClaim.move
+    return Color.values().mapNotNull { color ->
+        if (state.nextMoveColor == color) {
+            val square = state.squares.byPosition(move.from) as Square.Occupied
+            if (square.piece.type == Pawn && move.from.offset(color.pawnForwardVector, 2) == move.to) {
+                val enPassantPosition = move.from.offset(color.pawnForwardVector)
+                color to enPassantPosition
             } else {
-                state.enPassantSquares[color]
-                        ?.takeIf { move.to != it }
-                        ?.takeIf {
-                            val pawnPosition = it.offset(color.pawnForwardVector)
-                            pawnPosition != move.to
-                        }
-                        ?.let { color to it }
+                null
             }
-        }
-                .toMap()
-
-private fun getNewColorToCastlingOptions(move: Move, state: State) =
-        Color.values().map { color ->
-            val currentCastlingOptions = state.castlingOptions[color]
-            val newCastlingOptions = if (color == state.nextMoveColor) {
-                val square = state.squares.byPosition(move.from) as Square.Occupied
-                when (square.piece.type) {
-                    King -> emptySet()
-                    Rook -> {
-                        val defaultKingPosition = color.defaultKingPosition
-                        when (move.from) {
-                            defaultKingPosition.offset(color.kingSideVector, 3) ->
-                                currentCastlingOptions - KingSide
-                            defaultKingPosition.offset(color.queenSideVector, 4) ->
-                                currentCastlingOptions - QueenSide
-                            else ->
-                                currentCastlingOptions
-                        }
+        } else {
+            state.enPassantSquares[color]
+                    ?.takeIf { move.to != it }
+                    ?.takeIf {
+                        val pawnPosition = it.offset(color.pawnForwardVector)
+                        pawnPosition != move.to
                     }
-                    else -> currentCastlingOptions
-                }
-            } else {
-                currentCastlingOptions
-            }
-            color to newCastlingOptions
+                    ?.let { color to it }
         }
-                .toMap()
-                .let { CastlingOptions(it) }
+    }
+            .toMap()
+}
+
+private fun getNewColorToCastlingOptions(moveClaim: MoveClaim, state: State): CastlingOptions {
+    val move = moveClaim.move
+    return Color.values().map { color ->
+        val currentCastlingOptions = state.castlingOptions[color]
+        val newCastlingOptions = if (color == state.nextMoveColor) {
+            val square = state.squares.byPosition(move.from) as Square.Occupied
+            when (square.piece.type) {
+                King -> emptySet()
+                Rook -> {
+                    val defaultKingPosition = color.defaultKingPosition
+                    when (move.from) {
+                        defaultKingPosition.offset(color.kingSideVector, 3) ->
+                            currentCastlingOptions - KingSide
+                        defaultKingPosition.offset(color.queenSideVector, 4) ->
+                            currentCastlingOptions - QueenSide
+                        else ->
+                            currentCastlingOptions
+                    }
+                }
+                else -> currentCastlingOptions
+            }
+        } else {
+            currentCastlingOptions
+        }
+        color to newCastlingOptions
+    }
+            .toMap()
+            .let { CastlingOptions(it) }
+}
 
 private val Color.defaultKingPosition: Position
     get() = when (this) {
@@ -165,7 +171,8 @@ private val Color.defaultKingPosition: Position
         Color.Green -> Position.ofFileAndRank(13, 6)
     }
 
-private fun getNewPlyCount(move: Move, state: State): PlyCount {
+private fun getNewPlyCount(moveClaim: MoveClaim, state: State): PlyCount {
+    val move = moveClaim.move
     if (move.isCapture(state) || move.isPawnAdvance(state)) {
         return PlyCount(0)
     }

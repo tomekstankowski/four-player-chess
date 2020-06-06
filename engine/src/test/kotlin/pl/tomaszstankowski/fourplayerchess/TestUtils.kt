@@ -1,12 +1,19 @@
 package pl.tomaszstankowski.fourplayerchess
 
-import pl.tomaszstankowski.fourplayerchess.engine.Engine
-import pl.tomaszstankowski.fourplayerchess.engine.ParseStateFromFenResult
-import pl.tomaszstankowski.fourplayerchess.engine.Position
-import pl.tomaszstankowski.fourplayerchess.engine.State
+import pl.tomaszstankowski.fourplayerchess.engine.*
 
-fun Engine.getStateAfterMove(from: Position, to: Position) =
+fun Engine.getStateAfterMove(from: String, to: String) =
         makeMove(from, to)!!.first
+
+fun Engine.makeMove(from: String, to: String) =
+        makeMove(
+                moveClaim = MoveClaim.RegularMoveClaim(
+                        move = Move(
+                                from = Position.parse(from),
+                                to = Position.parse(to)
+                        )
+                )
+        )
 
 fun createEngineWithStateFromFen(fen: String): Engine {
     val state = parseStateFromFenOrThrow(fen)
