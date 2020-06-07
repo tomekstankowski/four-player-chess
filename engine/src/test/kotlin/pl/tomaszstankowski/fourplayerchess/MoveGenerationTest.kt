@@ -1,6 +1,8 @@
 package pl.tomaszstankowski.fourplayerchess
 
 import org.amshove.kluent.shouldBeEqualTo
+import org.amshove.kluent.shouldContain
+import org.amshove.kluent.shouldNotContain
 import org.spekframework.spek2.Spek
 import pl.tomaszstankowski.fourplayerchess.engine.*
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
@@ -1441,6 +1443,36 @@ class MoveGenerationTest : Spek({
                     Move(from = Position.parse("k5"), to = Position.parse("j4")),
                     Move(from = Position.parse("k5"), to = Position.parse("j5")),
                     Move(from = Position.parse("k5"), to = Position.parse("j6"))
+            )
+        }
+
+        test("cannot be captured via discovered attack") {
+            val state = parseStateFromFenOrThrow("""
+            Y-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-0-
+            3,yR,yN,yB,yK,1,yB,yN,yR,3/
+            4,yP,yP,1,yP,yP,yP,4/
+            3,yP,2,yP,3,yP,3/
+            bR,bP,9,gP,1,gR/
+            bN,bP,5,yQ,2,gP,2,gN/
+            bB,bP,9,gP,1,gB/
+            bK,1,bP,9,gP,1/
+            bQ,bP,9,gP,1,gK/
+            bB,bP,10,gP,gB/
+            1,bP,7,bN,2,gP,gN/
+            bR,bP,10,gP,gR/
+            3,rP,rP,rN,2,rB,1,rN,3/
+            5,rP,rP,1,rP,rP,rP,3/
+            3,rR,1,rB,rQ,rK,2,rR,3
+        """.trimIndent())
+            val engine = Engine(state)
+
+            val validMoves = engine.stateFeatures.legalMoves
+
+            validMoves.filterByMovedPieceType(state, Queen) shouldNotContain Move(
+                    from = Position.parse("h10"), to = Position.parse("h1")
+            )
+            validMoves.filterByMovedPieceType(state, Queen) shouldContain Move(
+                    from = Position.parse("h10"), to = Position.parse("h2")
             )
         }
     }

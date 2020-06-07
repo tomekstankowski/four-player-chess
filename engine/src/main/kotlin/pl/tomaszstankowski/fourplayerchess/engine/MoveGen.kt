@@ -95,6 +95,14 @@ private fun removeIllegalMoves(state: State, pseudoMoves: MutableList<Move>, opp
                 }
             }
         }
+        val toSquare = state.squares.byPosition(move.to)
+        val isOccupiedByNotEliminatedKing = toSquare is Square.Occupied
+                && toSquare.piece.type == King
+                && !state.eliminatedColors.contains(toSquare.piece.color)
+        // King must not be captured via discovered attack, each player should be allowed to respond to check
+        if (isOccupiedByNotEliminatedKing) {
+            return@removeIf true
+        }
         return@removeIf false
     }
     if (opponentsActivity.pins.isNotEmpty()) {
