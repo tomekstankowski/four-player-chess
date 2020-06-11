@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS lobby
 CREATE TABLE IF NOT EXISTS lobby_membership
 (
     lobby_id   UUID REFERENCES lobby (id),
-    player_id  UUID UNIQUE NOT NULL,
+    player_id  UUID NOT NULL,
     created_at TIMESTAMP,
     PRIMARY KEY (lobby_id, player_id)
 )

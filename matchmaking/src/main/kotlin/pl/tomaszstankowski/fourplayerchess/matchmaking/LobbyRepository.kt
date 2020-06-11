@@ -10,6 +10,8 @@ internal interface LobbyRepository {
 
     fun findByName(name: String): Lobby?
 
+    fun findByPlayerId(playerId: UUID): List<Lobby>
+
     fun findAll(): List<Lobby>
 
     fun updateIfVersionEquals(lobby: Lobby, version: Int): Boolean

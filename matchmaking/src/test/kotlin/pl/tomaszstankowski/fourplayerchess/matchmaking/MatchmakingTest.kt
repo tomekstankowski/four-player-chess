@@ -50,23 +50,6 @@ class MatchmakingTest : Spek({
             result shouldBeEqualTo CreateLobbyResult.NameConflict(name = "Pokój #1")
         }
 
-        it("should return error when player is already in other lobby") {
-            val service = createServiceForTesting()
-            service.createLobby(
-                    CREATE_LOBBY_DTO.copy(
-                            lobbyEditableDetails = LobbyEditableDetails(name = "Pokój #1")
-                    )
-            )
-
-            val result = service.createLobby(
-                    CREATE_LOBBY_DTO.copy(
-                            lobbyEditableDetails = LobbyEditableDetails(name = "Pokój #2")
-                    )
-            )
-
-            result shouldBeEqualTo CreateLobbyResult.RequestingPlayerAlreadyInLobby
-        }
-
         it("should return error when lobby details are not valid") {
             val service = createServiceForTesting()
             val dto = CREATE_LOBBY_DTO.copy(
@@ -341,9 +324,9 @@ class MatchmakingTest : Spek({
             service.deleteLobby(
                     DELETE_LOBBY_DTO.copy(requestingPlayerId = UUID.fromString("84a76df7-532c-46c6-b951-c680dddd5b30"))
             )
-            val currentLobbyOfPlayer = service.getCurrentLobbyOfPLayer(UUID.fromString("641c5f76-1225-4642-a9db-80f18dc3125e"))
+            val lobbiesOfCurrentPlayer = service.getActiveLobbiesOfAPLayer(UUID.fromString("641c5f76-1225-4642-a9db-80f18dc3125e"))
 
-            currentLobbyOfPlayer shouldBeEqualTo null
+            lobbiesOfCurrentPlayer shouldBeEqualTo emptyList()
         }
     }
 
@@ -366,36 +349,6 @@ class MatchmakingTest : Spek({
             service.joinLobby(JOIN_LOBBY_DTO)
 
             val result = service.joinLobby(JOIN_LOBBY_DTO)
-
-            result shouldBeEqualTo JoinLobbyResult.PlayerAlreadyInLobby
-        }
-
-        it("should return error if player is already in other lobby") {
-            val service = createServiceForTesting()
-            service.createLobby(
-                    CREATE_LOBBY_DTO.copy(
-                            requestingPlayerId = UUID.fromString("b33f84f6-7b53-4caf-bae7-dc1c15d3e6b8"),
-                            lobbyEditableDetails = LobbyEditableDetails(name = "Pokój 1")
-                    )
-            )
-            service.createLobby(
-                    CREATE_LOBBY_DTO.copy(
-                            requestingPlayerId = UUID.fromString("9cce4d8f-16f5-4dcf-823f-839c4c3c7792"),
-                            lobbyEditableDetails = LobbyEditableDetails(name = "Pokój 2"))
-            )
-            service.joinLobby(
-                    JOIN_LOBBY_DTO.copy(
-                            lobbyId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
-                            requestingPlayerId = UUID.fromString("eae112d7-7460-4a63-a6b1-a3256d6a98ac")
-                    )
-            )
-
-            val result = service.joinLobby(
-                    JOIN_LOBBY_DTO.copy(
-                            lobbyId = UUID.fromString("00000000-0000-0000-0000-000000000002"),
-                            requestingPlayerId = UUID.fromString("eae112d7-7460-4a63-a6b1-a3256d6a98ac")
-                    )
-            )
 
             result shouldBeEqualTo JoinLobbyResult.PlayerAlreadyInLobby
         }

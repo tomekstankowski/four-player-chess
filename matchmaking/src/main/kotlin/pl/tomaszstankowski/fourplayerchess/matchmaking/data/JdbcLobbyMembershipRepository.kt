@@ -35,12 +35,6 @@ internal class JdbcLobbyMembershipRepository(dataSource: DataSource) : LobbyMemb
         return jdbcTemplate.query(sql, params, this::mapRow)
     }
 
-    override fun findByPlayerId(playerId: UUID): LobbyMembership? {
-        val sql = "SELECT * FROM ${LobbyMembershipTable.NAME} WHERE $PLAYER_ID = :playerId"
-        val params = MapSqlParameterSource("playerId", playerId)
-        return jdbcTemplate.query(sql, params, this::mapRow).firstOrNull()
-    }
-
     override fun deleteByLobbyIdAndPlayerId(lobbyId: UUID, playerId: UUID) {
         val sql = "DELETE FROM ${LobbyMembershipTable.NAME} WHERE $LOBBY_ID = :lobbyId AND $PLAYER_ID = :playerId"
         val params = MapSqlParameterSource()

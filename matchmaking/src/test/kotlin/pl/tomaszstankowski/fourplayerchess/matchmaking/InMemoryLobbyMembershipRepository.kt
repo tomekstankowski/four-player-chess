@@ -16,10 +16,6 @@ internal class InMemoryLobbyMembershipRepository(private val dataSource: InMemor
                     .filter { it.lobbyId == lobbyId }
                     .sortedByDescending { it.joinedAt }
 
-    override fun findByPlayerId(playerId: UUID): LobbyMembership? =
-            dataSource.lobbyMemberships
-                    .firstOrNull { it.playerId == playerId }
-
     override fun deleteByLobbyIdAndPlayerId(lobbyId: UUID, playerId: UUID) {
         dataSource.lobbyMemberships.removeIf { it.lobbyId == lobbyId && it.playerId == playerId }
     }

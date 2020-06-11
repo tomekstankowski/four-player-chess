@@ -22,8 +22,6 @@ class LobbyController(private val matchmakingService: MatchmakingService) {
             is CreateLobbyResult.Success -> result.lobby
             is CreateLobbyResult.NameConflict -> throw nameConflictException(result.name)
             is CreateLobbyResult.LobbyDetailsNotValid -> throw ApiException.invalidBody(result.errors)
-            is CreateLobbyResult.RequestingPlayerAlreadyInLobby ->
-                throw ApiException.unprocessableEntity("Already in lobby")
         }
     }
 
@@ -103,10 +101,8 @@ class LobbyController(private val matchmakingService: MatchmakingService) {
             matchmakingService.getPlayersInLobby(id) ?: throw lobbyNotFoundException(id)
 
     @GetMapping("/joined-by-me")
-    fun getCurrentLobbyOfPlayer(): LobbyJoinedByPlayerDto =
-            LobbyJoinedByPlayerDto(
-                    lobby = matchmakingService.getCurrentLobbyOfPLayer(getAuthenticatedUserId())
-            )
+    fun getActiveLobbiesOfAPlayer(): List<LobbyDto> =
+            matchmakingService.getActiveLobbiesOfAPLayer(getAuthenticatedUserId())
 
     private fun lobbyNotFoundException(id: UUID) = ApiException.resourceNotFound("lobby", id)
 
@@ -118,5 +114,3 @@ class LobbyController(private val matchmakingService: MatchmakingService) {
                     )
             )
 }
-
-data class LobbyJoinedByPlayerDto(val lobby: LobbyDto?)

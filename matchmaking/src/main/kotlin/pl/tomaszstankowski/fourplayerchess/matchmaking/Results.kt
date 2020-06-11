@@ -7,7 +7,6 @@ sealed class CreateLobbyResult {
     data class Success(val lobby: LobbyDto) : CreateLobbyResult()
     data class NameConflict(val name: String) : CreateLobbyResult()
     data class LobbyDetailsNotValid(val errors: Set<ValidationError>) : CreateLobbyResult()
-    object RequestingPlayerAlreadyInLobby : CreateLobbyResult()
 }
 
 sealed class UpdateLobbyResult {

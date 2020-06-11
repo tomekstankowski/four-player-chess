@@ -60,10 +60,6 @@ class MatchmakingService internal constructor(
             return CreateLobbyResult.LobbyDetailsNotValid(validationErrors)
         }
         return transactionOperations.executeWithResult {
-            val isAlreadyInLobby = lobbyMembershipRepository.findByPlayerId(dto.requestingPlayerId) != null
-            if (isAlreadyInLobby) {
-                return@executeWithResult CreateLobbyResult.RequestingPlayerAlreadyInLobby
-            }
             if (lobbyRepository.findByName(details.name) != null) {
                 return@executeWithResult CreateLobbyResult.NameConflict(details.name)
             }
@@ -138,11 +134,12 @@ class MatchmakingService internal constructor(
         return transactionOperations.executeWithResult {
             val lobby = lobbyRepository.findById(lobbyId)
                     ?: return@executeWithResult JoinLobbyResult.LobbyNotFound(lobbyId)
-            val isPlayerAlreadyInLobby = lobbyMembershipRepository.findByPlayerId(requestingPlayerId) != null
+            val memberships = lobbyMembershipRepository.findByLobbyIdOrderByCreatedAtDesc(lobbyId)
+            val isPlayerAlreadyInLobby = memberships.any { membership -> membership.playerId == requestingPlayerId }
             if (isPlayerAlreadyInLobby) {
                 return@executeWithResult JoinLobbyResult.PlayerAlreadyInLobby
             }
-            val isLobbyFull = lobbyMembershipRepository.findByLobbyIdOrderByCreatedAtDesc(lobbyId).size == 4
+            val isLobbyFull = memberships.size == 4
             if (isLobbyFull) {
                 return@executeWithResult JoinLobbyResult.LobbyIsFull
             }
@@ -186,9 +183,10 @@ class MatchmakingService internal constructor(
                 .map { it.toDto() }
     }
 
-    fun getCurrentLobbyOfPLayer(playerId: UUID): LobbyDto? {
-        val playerMembership = lobbyMembershipRepository.findByPlayerId(playerId) ?: return null
-        return lobbyRepository.findById(playerMembership.lobbyId)?.toDto()
+    fun getActiveLobbiesOfAPLayer(playerId: UUID): List<LobbyDto> {
+        return lobbyRepository.findByPlayerId(playerId)
+                .sortedByDescending { lobby -> lobby.createdAt }
+                .map { lobby -> lobby.toDto() }
     }
 }
 

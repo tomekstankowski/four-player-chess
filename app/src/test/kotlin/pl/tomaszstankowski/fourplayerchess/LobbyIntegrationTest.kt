@@ -138,13 +138,13 @@ class LobbyIntegrationTest : IntegrationTest() {
 
     @Test
     @WithMockUser(username = "ff698d5e-d1a7-45d4-9e12-18d88bdf517e")
-    fun `can get player's current lobby`() {
+    fun `can get player's active lobbies`() {
         mockMvc.get("/lobbies/joined-by-me")
                 .andExpect {
                     status { isOk }
-                    jsonPath("lobby.id") { value(FirstLobby.ID) }
-                    jsonPath("lobby.name") { value(FirstLobby.NAME) }
-                    jsonPath("lobby.createdAt") { value(FirstLobby.CREATED_AT) }
+                    jsonPath("[0].id") { value(FirstLobby.ID) }
+                    jsonPath("[0].name") { value(FirstLobby.NAME) }
+                    jsonPath("[0].createdAt") { value(FirstLobby.CREATED_AT) }
                 }
     }
 }

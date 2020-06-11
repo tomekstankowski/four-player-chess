@@ -49,6 +49,13 @@ internal class JdbcLobbyRepository(dataSource: DataSource) : LobbyRepository {
             jdbcTemplate.query("SELECT * FROM ${LobbyTable.NAME} WHERE $NAME = ?", mapper, name)
                     .firstOrNull()
 
+    override fun findByPlayerId(playerId: UUID): List<Lobby> {
+        val sql = "SELECT * FROM ${LobbyTable.NAME} l " +
+                "LEFT JOIN ${LobbyMembershipTable.NAME} lm ON l.$ID = lm.${LobbyMembershipTable.Columns.LOBBY_ID} " +
+                "WHERE lm.${LobbyMembershipTable.Columns.PLAYER_ID} = ?"
+        return jdbcTemplate.query(sql, mapper, playerId)
+    }
+
     override fun findAll(): List<Lobby> =
             jdbcTemplate.query("SELECT * FROM ${LobbyTable.NAME}", mapper)
 

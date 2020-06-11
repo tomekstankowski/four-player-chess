@@ -13,6 +13,13 @@ internal class InMemoryLobbyRepository(private val dataSource: InMemoryDataSourc
 
     override fun findByName(name: String): Lobby? = dataSource.lobbies.find { it.name == name }
 
+    override fun findByPlayerId(playerId: UUID): List<Lobby> =
+            dataSource.lobbies.filter { lobby ->
+                dataSource.lobbyMemberships.any { membership ->
+                    membership.playerId == playerId && membership.lobbyId == lobby.id
+                }
+            }
+
     override fun findAll(): List<Lobby> = dataSource.lobbies
 
     override fun updateIfVersionEquals(lobby: Lobby, version: Int): Boolean {
