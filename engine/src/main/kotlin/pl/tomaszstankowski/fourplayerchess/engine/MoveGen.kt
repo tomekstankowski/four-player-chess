@@ -2,8 +2,6 @@ package pl.tomaszstankowski.fourplayerchess.engine
 
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
 
-data class Move(val from: Position, val to: Position)
-
 internal fun genLegalMoves(state: State, stateFeatures: StateFeatures): List<Move> {
     val moves = ArrayList<Move>()
     val addMoveIfLegal = { move: Move ->

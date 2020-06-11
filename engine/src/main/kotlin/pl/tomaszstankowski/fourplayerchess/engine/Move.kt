@@ -3,6 +3,8 @@ package pl.tomaszstankowski.fourplayerchess.engine
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.King
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.Pawn
 
+data class Move(val from: Position, val to: Position)
+
 sealed class MoveClaim {
     abstract val move: Move
 
