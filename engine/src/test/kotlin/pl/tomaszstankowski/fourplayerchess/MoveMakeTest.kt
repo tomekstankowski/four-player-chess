@@ -2,7 +2,8 @@ package pl.tomaszstankowski.fourplayerchess
 
 import org.amshove.kluent.shouldBeEqualTo
 import org.spekframework.spek2.Spek
-import pl.tomaszstankowski.fourplayerchess.engine.Color.Yellow
+import pl.tomaszstankowski.fourplayerchess.engine.Check
+import pl.tomaszstankowski.fourplayerchess.engine.Color.*
 import pl.tomaszstankowski.fourplayerchess.engine.Move
 import pl.tomaszstankowski.fourplayerchess.engine.MoveClaim
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.Knight
@@ -150,12 +151,13 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        val (newState, _) = engine.makeMove(
+        engine.makeMove(
                 MoveClaim.PromotionMoveClaim.getOrNull(
                         move = Move(from = Position.parse("i7"), to = Position.parse("i8")),
                         pieceType = Knight
                 )!!
-        )!!
+        )
+        val newState = engine.state
 
         newState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
@@ -201,7 +203,7 @@ class MoveMakeTest : Spek({
                 )
         )
 
-        result shouldBeEqualTo null
+        result shouldBeEqualTo false
     }
 
     test("must not request pawn promotion when move is not promotion") {
@@ -230,7 +232,7 @@ class MoveMakeTest : Spek({
                 )!!
         )
 
-        result shouldBeEqualTo null
+        result shouldBeEqualTo false
     }
 
     test("king side castle") {
@@ -837,5 +839,38 @@ class MoveMakeTest : Spek({
         engine.claimDraw()
 
         engine.isDraw shouldBeEqualTo false
+    }
+
+    test("check two kings") {
+        val engine = createEngineWithStateFromFen("""
+            R-0,0,0,0-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            3,yK,10/
+            4,yB,9/
+            8,yP,1,yB,3/
+            8,gP,5/
+            9,gP,4/
+            2,bK,9,gK,1/
+            3,bP,8,gR,1/
+            2,bN,bB,6,gP,3/
+            14/
+            7,rP,rP,5/
+            6,rR,rK,6/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.makeMove("g4", "g9")
+
+        engine.stateFeatures.checks shouldBeEqualTo mapOf(
+                Red to emptyList(),
+                Blue to listOf(
+                        Check(checkingPiecePosition = Position.parse("g9"), checkedKingPosition = Position.parse("c9"))
+                ),
+                Yellow to emptyList(),
+                Green to listOf(
+                        Check(checkingPiecePosition = Position.parse("g9"), checkedKingPosition = Position.parse("m9"))
+                )
+        )
     }
 })

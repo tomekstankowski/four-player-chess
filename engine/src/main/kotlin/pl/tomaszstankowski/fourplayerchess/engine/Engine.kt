@@ -9,6 +9,9 @@ class Engine(state: State) {
     var stateFeatures: StateFeatures
         private set
 
+    var legalMoves: List<Move>
+        private set
+
     private val transpositionTable = HashMap<Int, TranspositionTableData>()
 
     private var isThreeFoldRepetition = false
@@ -16,27 +19,30 @@ class Engine(state: State) {
     private var isFiftyMoveRule = false
 
     val isDrawByClaimAllowed: Boolean
-        get() = (isThreeFoldRepetition || isFiftyMoveRule) && !stateFeatures.isGameOver
+        get() = (isThreeFoldRepetition || isFiftyMoveRule) && !isGameOver
 
     private var isDrawByClaim = false
 
     val isDraw: Boolean
-        get() = isDrawByClaim || stateFeatures.isStaleMate
+        get() = isDrawByClaim || legalMoves.isEmpty()
 
     val isGameOver: Boolean
-        get() = isDrawByClaim || stateFeatures.isGameOver
+        get() = isDraw || state.eliminatedColors.size == Color.values().size - 1
 
     val winningColor: Color?
         get() {
-            if (!stateFeatures.isGameOver || stateFeatures.isStaleMate) {
+            if (!isGameOver || isDraw) {
                 return null
             }
             return Color.values().find { !state.eliminatedColors.contains(it) }
         }
 
     init {
+        val stateFeatures = getStateFeatures(state)
+        val legalMoves = genLegalMoves(state, stateFeatures)
         this.state = state
-        this.stateFeatures = getStateFeatures(state)
+        this.stateFeatures = stateFeatures
+        this.legalMoves = legalMoves
     }
 
     fun claimDraw(): Boolean {
@@ -46,16 +52,17 @@ class Engine(state: State) {
         return isDrawByClaim
     }
 
-    fun makeMove(moveClaim: MoveClaim): Pair<State, StateFeatures>? {
-        val isValidMove = stateFeatures.legalMoves.any { move ->
+    fun makeMove(moveClaim: MoveClaim): Boolean {
+        val isValidMove = legalMoves.any { move ->
             move == moveClaim.move
                     && (moveClaim !is PromotionMoveClaim || move.isPawnPromotion(state))
                     && (!move.isPawnPromotion(state) || moveClaim is PromotionMoveClaim)
         }
         if (isValidMove) {
-            val (newState, newStateFeatures) = makeMove(moveClaim, state)
+            val (newState, newStateFeatures, newLegalMoves) = makeMove(moveClaim, state)
             state = newState
             stateFeatures = newStateFeatures
+            legalMoves = newLegalMoves
 
             val key = state.transpositionTableKey
             val data = transpositionTable.getOrPut(key) { TranspositionTableData() }
@@ -68,9 +75,9 @@ class Engine(state: State) {
                 isFiftyMoveRule = true
             }
 
-            return newState to newStateFeatures
+            return true
         }
-        return null
+        return false
     }
 
     private val State.transpositionTableKey: Int
@@ -84,10 +91,4 @@ class Engine(state: State) {
         }
 
     private data class TranspositionTableData(var positionOccurrenceCount: Int = 0)
-
-    private val StateFeatures.isGameOver: Boolean
-        get() = legalMoves.isEmpty() || state.eliminatedColors.size == Color.values().size - 1
-
-    private val StateFeatures.isStaleMate: Boolean
-        get() = legalMoves.isEmpty()
 }

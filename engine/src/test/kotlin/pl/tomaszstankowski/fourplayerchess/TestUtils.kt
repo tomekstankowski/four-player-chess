@@ -2,8 +2,11 @@ package pl.tomaszstankowski.fourplayerchess
 
 import pl.tomaszstankowski.fourplayerchess.engine.*
 
-fun Engine.getStateAfterMove(from: String, to: String) =
-        makeMove(from, to)!!.first
+fun Engine.getStateAfterMove(from: String, to: String): State {
+    val result = makeMove(from, to)
+    assert(result)
+    return state
+}
 
 fun Engine.makeMove(from: String, to: String) =
         makeMove(

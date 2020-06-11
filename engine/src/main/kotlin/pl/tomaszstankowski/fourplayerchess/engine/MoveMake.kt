@@ -5,7 +5,9 @@ import pl.tomaszstankowski.fourplayerchess.engine.Castling.QueenSide
 import pl.tomaszstankowski.fourplayerchess.engine.MoveClaim.PromotionMoveClaim
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
 
-internal fun makeMove(moveClaim: MoveClaim, state: State): Pair<State, StateFeatures> {
+internal data class MakeMoveOutcome(val state: State, val stateFeatures: StateFeatures, val legalMoves: List<Move>)
+
+internal fun makeMove(moveClaim: MoveClaim, state: State): MakeMoveOutcome {
     val pseudoState = state.copy(
             squares = getNewBoard(moveClaim, state),
             nextMoveColor = getNewNextMoveColor(state),
@@ -16,11 +18,11 @@ internal fun makeMove(moveClaim: MoveClaim, state: State): Pair<State, StateFeat
     return getLegalStateAndStateFeatures(pseudoState)
 }
 
-private tailrec fun getLegalStateAndStateFeatures(state: State): Pair<State, StateFeatures> {
+private tailrec fun getLegalStateAndStateFeatures(state: State): MakeMoveOutcome {
     val stateFeatures = getStateFeatures(state)
-    val legalMoves = stateFeatures.legalMoves
-    val isCheck = stateFeatures.isCheck
+    val legalMoves = genLegalMoves(state, stateFeatures)
     if (legalMoves.isEmpty()) {
+        val isCheck = stateFeatures.checks.getValue(state.nextMoveColor).isNotEmpty()
         val isEliminated = isCheck || state.eliminatedColors.size < 2
         if (isEliminated)
             return getLegalStateAndStateFeatures(
@@ -31,7 +33,7 @@ private tailrec fun getLegalStateAndStateFeatures(state: State): Pair<State, Sta
                     )
             )
     }
-    return state to stateFeatures
+    return MakeMoveOutcome(state, stateFeatures, legalMoves)
 }
 
 private fun getNewBoard(moveClaim: MoveClaim, state: State): Board {

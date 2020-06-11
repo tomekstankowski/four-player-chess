@@ -10,11 +10,11 @@ import com.github.h0tk3y.betterParse.parser.Parser
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.King
 
 
-data class IllegalRowLength(val length: Int) : ErrorResult()
+internal data class IllegalRowLength(val length: Int) : ErrorResult()
 
-data class IllegalKingCount(val color: Color, val count: Int) : ErrorResult()
+internal data class IllegalKingCount(val color: Color, val count: Int) : ErrorResult()
 
-data class PiecesWithoutKing(val color: Color) : ErrorResult()
+internal data class PiecesWithoutKing(val color: Color) : ErrorResult()
 
 private sealed class RowToken {
     data class EmptySquaresToken(val count: Int) : RowToken()

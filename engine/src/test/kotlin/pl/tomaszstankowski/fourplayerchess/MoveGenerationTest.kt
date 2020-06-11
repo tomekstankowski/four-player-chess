@@ -31,7 +31,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g2"), to = Position.parse("g3")),
@@ -59,7 +59,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
         }
@@ -84,7 +84,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g2"), to = Position.parse("g3"))
@@ -111,7 +111,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
         }
@@ -136,7 +136,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g2"), to = Position.parse("g3"))
@@ -163,7 +163,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g3"), to = Position.parse("g4"))
@@ -190,7 +190,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
         }
@@ -215,7 +215,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
         }
@@ -240,7 +240,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g3"), to = Position.parse("g4")),
@@ -268,7 +268,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g3"), to = Position.parse("g4")),
@@ -296,7 +296,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g3"), to = Position.parse("g4")),
@@ -325,7 +325,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move(from = Position.parse("k3"), to = Position.parse("l4"))
@@ -352,7 +352,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move(from = Position.parse("d3"), to = Position.parse("c4"))
@@ -379,7 +379,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g4"), to = Position.parse("g5"))
@@ -406,7 +406,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g4"), to = Position.parse("h5"))
@@ -433,7 +433,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
         }
@@ -461,7 +461,7 @@ class MoveGenerationTest : Spek({
             """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf(
                     Move(from = Position.parse("i4"), to = Position.parse("j5")),
@@ -503,7 +503,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf()
         }
@@ -528,7 +528,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g4"), to = Position.parse("f5")),
@@ -557,7 +557,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g4"), to = Position.parse("h5"))
@@ -584,7 +584,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf()
         }
@@ -612,7 +612,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val moves = engine.stateFeatures.legalMoves
+            val moves = engine.legalMoves
 
             moves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf(
                     Move(from = Position.parse("f3"), to = Position.parse("g5")),
@@ -643,7 +643,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf()
         }
@@ -668,7 +668,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g4"), to = Position.parse("i5"))
@@ -695,7 +695,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf()
         }
@@ -723,7 +723,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val moves = engine.stateFeatures.legalMoves
+            val moves = engine.legalMoves
 
             moves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf(
                     Move(from = Position.parse("d4"), to = Position.parse("d5")),
@@ -774,7 +774,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf()
         }
@@ -799,7 +799,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g3"), to = Position.parse("f3")),
@@ -828,7 +828,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g4"), to = Position.parse("i4"))
@@ -855,7 +855,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf()
         }
@@ -883,7 +883,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val moves = engine.stateFeatures.legalMoves
+            val moves = engine.legalMoves
 
             moves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf(
                     Move(from = Position.parse("j6"), to = Position.parse("j7")),
@@ -950,7 +950,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g4"), to = Position.parse("g5")),
@@ -981,7 +981,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf(
                     Move(from = Position.parse("g4"), to = Position.parse("i4"))
@@ -1008,7 +1008,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf()
         }
@@ -1036,7 +1036,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move(from = Position.parse("e2"), to = Position.parse("e3")),
@@ -1070,7 +1070,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move(from = Position.parse("e2"), to = Position.parse("e3")),
@@ -1102,7 +1102,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move(from = Position.parse("h1"), to = Position.parse("i1")),
@@ -1130,7 +1130,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf()
         }
@@ -1155,7 +1155,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move(from = Position.parse("h1"), to = Position.parse("i1"))
@@ -1182,7 +1182,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf()
         }
@@ -1207,7 +1207,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move(from = Position.parse("h1"), to = Position.parse("g1"))
@@ -1234,7 +1234,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move(from = Position.parse("h1"), to = Position.parse("f1")),
@@ -1262,7 +1262,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move(from = Position.parse("h1"), to = Position.parse("g1"))
@@ -1289,7 +1289,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move(from = Position.parse("h1"), to = Position.parse("i1")),
@@ -1317,7 +1317,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move(from = Position.parse("h1"), to = Position.parse("i1"))
@@ -1344,7 +1344,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move(from = Position.parse("h1"), to = Position.parse("j1")),
@@ -1372,7 +1372,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move(from = Position.parse("h1"), to = Position.parse("f1")),
@@ -1401,7 +1401,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move(from = Position.parse("h1"), to = Position.parse("j1")),
@@ -1432,7 +1432,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
                     Move(from = Position.parse("k5"), to = Position.parse("k6")),
@@ -1466,7 +1466,7 @@ class MoveGenerationTest : Spek({
         """.trimIndent())
             val engine = Engine(state)
 
-            val validMoves = engine.stateFeatures.legalMoves
+            val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Queen) shouldNotContain Move(
                     from = Position.parse("h10"), to = Position.parse("h1")
