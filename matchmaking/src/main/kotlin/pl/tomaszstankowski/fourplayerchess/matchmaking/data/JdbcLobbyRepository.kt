@@ -5,10 +5,13 @@ import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert
 import pl.tomaszstankowski.fourplayerchess.data.getInstantAtUTC
 import pl.tomaszstankowski.fourplayerchess.data.getUUID
+import pl.tomaszstankowski.fourplayerchess.data.getUUIDOrNull
 import pl.tomaszstankowski.fourplayerchess.data.toLocalDateTimeAtUTC
 import pl.tomaszstankowski.fourplayerchess.matchmaking.Lobby
 import pl.tomaszstankowski.fourplayerchess.matchmaking.LobbyRepository
 import pl.tomaszstankowski.fourplayerchess.matchmaking.data.LobbyTable.Columns.CREATED_AT
+import pl.tomaszstankowski.fourplayerchess.matchmaking.data.LobbyTable.Columns.DELETED
+import pl.tomaszstankowski.fourplayerchess.matchmaking.data.LobbyTable.Columns.GAME_ID
 import pl.tomaszstankowski.fourplayerchess.matchmaking.data.LobbyTable.Columns.ID
 import pl.tomaszstankowski.fourplayerchess.matchmaking.data.LobbyTable.Columns.NAME
 import pl.tomaszstankowski.fourplayerchess.matchmaking.data.LobbyTable.Columns.OWNER_ID
@@ -26,7 +29,9 @@ internal class JdbcLobbyRepository(dataSource: DataSource) : LobbyRepository {
                 name = rs.getString(NAME),
                 createdAt = rs.getInstantAtUTC(CREATED_AT),
                 ownerId = rs.getUUID(OWNER_ID),
-                version = rs.getInt(VERSION)
+                version = rs.getInt(VERSION),
+                isDeleted = rs.getBoolean(DELETED),
+                gameId = rs.getUUIDOrNull(GAME_ID)
         )
     }
 
@@ -36,7 +41,10 @@ internal class JdbcLobbyRepository(dataSource: DataSource) : LobbyRepository {
                         ID to lobby.id,
                         NAME to lobby.name,
                         CREATED_AT to lobby.createdAt.toLocalDateTimeAtUTC(),
-                        OWNER_ID to lobby.ownerId
+                        OWNER_ID to lobby.ownerId,
+                        GAME_ID to lobby.gameId,
+                        DELETED to lobby.isDeleted,
+                        VERSION to lobby.version
                 )
         )
     }
@@ -56,9 +64,6 @@ internal class JdbcLobbyRepository(dataSource: DataSource) : LobbyRepository {
         return jdbcTemplate.query(sql, mapper, playerId)
     }
 
-    override fun findAll(): List<Lobby> =
-            jdbcTemplate.query("SELECT * FROM ${LobbyTable.NAME}", mapper)
-
     override fun updateIfVersionEquals(lobby: Lobby, version: Int): Boolean {
         val numOfRowsUpdated = jdbcTemplate.update(
                 """
@@ -66,14 +71,19 @@ internal class JdbcLobbyRepository(dataSource: DataSource) : LobbyRepository {
            $NAME = ?,
            $CREATED_AT = ?,
            $OWNER_ID = ?,
-           $VERSION = ?
-           WHERE $ID = ?
+           $VERSION = ?,
+           $GAME_ID = ?,
+           $DELETED = ?
+           WHERE $ID = ? AND $VERSION = ?
         """,
                 lobby.name,
                 lobby.createdAt.toLocalDateTimeAtUTC(),
                 lobby.ownerId,
                 lobby.version,
-                lobby.id
+                lobby.gameId,
+                lobby.isDeleted,
+                lobby.id,
+                version
         )
         return numOfRowsUpdated > 0
     }

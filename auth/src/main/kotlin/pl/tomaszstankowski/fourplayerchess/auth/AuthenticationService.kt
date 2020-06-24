@@ -1,6 +1,7 @@
 package pl.tomaszstankowski.fourplayerchess.auth
 
 import org.springframework.util.IdGenerator
+import org.springframework.util.JdkIdGenerator
 import java.time.Clock
 import java.time.temporal.TemporalUnit
 
@@ -8,7 +9,7 @@ class AuthenticationService private constructor(private val idGenerator: IdGener
                                                 private val jwtIssuer: JwtIssuer) {
 
     companion object {
-        fun create(idGenerator: IdGenerator,
+        fun create(idGenerator: IdGenerator = JdkIdGenerator(),
                    clock: Clock,
                    secretKeyBase64Encoded: String,
                    expirationTime: Long,

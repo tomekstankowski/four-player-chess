@@ -7,6 +7,7 @@ dependencies {
     val testContainers = "1.12.2"
 
     implementation(project(":matchmaking"))
+    implementation(project(":game"))
     implementation(project(":auth"))
     implementation(project(":common"))
 
@@ -14,8 +15,12 @@ dependencies {
     implementation("org.postgresql:postgresql:$postgreSQL")
 
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.security:spring-security-messaging")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+
+    implementation("io.github.microutils:kotlin-logging:1.7.9")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.junit.vintage", module = "junit-vintage-engine")

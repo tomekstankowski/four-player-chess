@@ -12,8 +12,6 @@ internal interface LobbyRepository {
 
     fun findByPlayerId(playerId: UUID): List<Lobby>
 
-    fun findAll(): List<Lobby>
-
     fun updateIfVersionEquals(lobby: Lobby, version: Int): Boolean
 
     fun delete(id: UUID)

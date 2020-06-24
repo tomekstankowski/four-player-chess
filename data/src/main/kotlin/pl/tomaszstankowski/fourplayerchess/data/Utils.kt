@@ -11,6 +11,9 @@ import java.util.*
 fun ResultSet.getUUID(column: String): UUID =
         getObject(column, UUID::class.java)!!
 
+fun ResultSet.getUUIDOrNull(column: String): UUID? =
+        getObject(column, UUID::class.java)
+
 fun ResultSet.getInstantAtUTC(column: String): Instant =
         getObject(column, LocalDateTime::class.java).toInstant(ZoneOffset.UTC)
 

@@ -1,5 +1,7 @@
-package pl.tomaszstankowski.fourplayerchess.matchmaking
+package pl.tomaszstankowski.fourplayerchess.matchmaking.data
 
+import pl.tomaszstankowski.fourplayerchess.matchmaking.LobbyMembership
+import pl.tomaszstankowski.fourplayerchess.matchmaking.LobbyMembershipRepository
 import java.util.*
 
 internal class InMemoryLobbyMembershipRepository(private val dataSource: InMemoryDataSource) : LobbyMembershipRepository {

@@ -13,6 +13,8 @@ internal class LobbyFactory(private val clock: Clock,
             name = lobbyEditableDetails.name,
             createdAt = Instant.now(clock),
             ownerId = ownerId,
+            gameId = null,
+            isDeleted = false,
             version = 1
     )
 }

@@ -5,14 +5,12 @@ import java.util.*
 
 sealed class CreateLobbyResult {
     data class Success(val lobby: LobbyDto) : CreateLobbyResult()
-    data class NameConflict(val name: String) : CreateLobbyResult()
     data class LobbyDetailsNotValid(val errors: Set<ValidationError>) : CreateLobbyResult()
 }
 
 sealed class UpdateLobbyResult {
     data class Success(val lobby: LobbyDto) : UpdateLobbyResult()
     data class LobbyNotFound(val lobbyId: UUID) : UpdateLobbyResult()
-    data class NameConflict(val name: String) : UpdateLobbyResult()
     data class LobbyDetailsNotValid(val errors: Set<ValidationError>) : UpdateLobbyResult()
     object RequestingPlayerNotAnOwner : UpdateLobbyResult()
 }
@@ -35,4 +33,11 @@ sealed class LeaveLobbyResult {
     object OwnerMemberMustNotLeaveLobby : LeaveLobbyResult()
     object RequestingPlayerNotAMember : LeaveLobbyResult()
     data class LobbyNotFound(val lobbyId: UUID) : LeaveLobbyResult()
+}
+
+sealed class StartGameResult {
+    data class Success(val game: GameDto) : StartGameResult()
+    data class LobbyNotFound(val lobbyId: UUID) : StartGameResult()
+    data class NotEnoughPlayers(val currentPlayersCount: Int) : StartGameResult()
+    object RequestingPlayerNotAnOwner : StartGameResult()
 }

@@ -9,6 +9,8 @@ internal object LobbyTable {
         const val CREATED_AT = "created_at"
         const val OWNER_ID = "owner_id"
         const val VERSION = "version"
+        const val DELETED = "deleted"
+        const val GAME_ID = "game_id"
     }
 }
 

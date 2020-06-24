@@ -1,5 +1,7 @@
-package pl.tomaszstankowski.fourplayerchess.matchmaking
+package pl.tomaszstankowski.fourplayerchess.matchmaking.data
 
+import pl.tomaszstankowski.fourplayerchess.matchmaking.Lobby
+import pl.tomaszstankowski.fourplayerchess.matchmaking.LobbyRepository
 import java.util.*
 
 internal class InMemoryLobbyRepository(private val dataSource: InMemoryDataSource) : LobbyRepository {
@@ -20,8 +22,6 @@ internal class InMemoryLobbyRepository(private val dataSource: InMemoryDataSourc
                 }
             }
 
-    override fun findAll(): List<Lobby> = dataSource.lobbies
-
     override fun updateIfVersionEquals(lobby: Lobby, version: Int): Boolean {
         val index = dataSource.lobbies.indexOfFirst { it.id == lobby.id }
         check(index != -1)
@@ -35,4 +35,5 @@ internal class InMemoryLobbyRepository(private val dataSource: InMemoryDataSourc
     override fun delete(id: UUID) {
         dataSource.lobbies.removeIf { it.id == id }
     }
+
 }

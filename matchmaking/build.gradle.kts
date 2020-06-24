@@ -14,6 +14,7 @@ dependencies {
     implementation(project(":data"))
 
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.valiktor:valiktor-core:$valiktorVersion")
 
     testImplementation("org.spekframework.spek2:spek-dsl-jvm:$spekVersion")

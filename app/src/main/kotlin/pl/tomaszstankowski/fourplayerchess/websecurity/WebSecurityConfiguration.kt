@@ -1,6 +1,7 @@
 package pl.tomaszstankowski.fourplayerchess.websecurity
 
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
 import org.springframework.security.config.http.SessionCreationPolicy.STATELESS
@@ -20,11 +21,19 @@ class WebSecurityConfiguration(private val authenticationService: Authentication
                 .sessionManagement().sessionCreationPolicy(STATELESS)
                 .and()
                 .authorizeRequests()
+                .antMatchers(HttpMethod.GET, "/lobbies").permitAll()
+                .antMatchers("/socket/**").permitAll()
                 .antMatchers("/token").permitAll()
+                .antMatchers(HttpMethod.OPTIONS).permitAll()
                 .anyRequest()
                 .authenticated()
                 .and()
-                .addFilter(JwtAuthenticationFilter(authenticationService, authenticationManager()))
+                .addFilter(
+                        WebAuthenticationFilter(
+                                AuthenticationHelper(authenticationService),
+                                authenticationManager()
+                        )
+                )
                 .exceptionHandling()
                 .authenticationEntryPoint(BasicAuthenticationEntryPoint())
     }

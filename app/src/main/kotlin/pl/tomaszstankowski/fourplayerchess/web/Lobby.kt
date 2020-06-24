@@ -9,7 +9,8 @@ import java.util.*
 
 @RestController
 @RequestMapping("/lobbies")
-class LobbyController(private val matchmakingService: MatchmakingService) {
+class LobbyController(private val matchmakingService: MatchmakingService,
+                      private val lobbySearchService: LobbySearchService) {
 
     @PostMapping
     @ResponseStatus(CREATED)
@@ -20,7 +21,6 @@ class LobbyController(private val matchmakingService: MatchmakingService) {
         )
         return when (val result = matchmakingService.createLobby(dto)) {
             is CreateLobbyResult.Success -> result.lobby
-            is CreateLobbyResult.NameConflict -> throw nameConflictException(result.name)
             is CreateLobbyResult.LobbyDetailsNotValid -> throw ApiException.invalidBody(result.errors)
         }
     }
@@ -30,7 +30,7 @@ class LobbyController(private val matchmakingService: MatchmakingService) {
             matchmakingService.getLobby(id) ?: throw ApiException.resourceNotFound("lobby", id)
 
     @GetMapping
-    fun getAllLobbies(): List<LobbyDto> = matchmakingService.getAllLobbies()
+    fun getAllLobbies(): List<LobbyListDto> = lobbySearchService.getAllLobbies()
 
     @PutMapping("/{id}")
     fun updateLobby(@PathVariable id: UUID, @RequestBody lobbyEditableDetails: LobbyEditableDetails): LobbyDto {
@@ -42,10 +42,8 @@ class LobbyController(private val matchmakingService: MatchmakingService) {
         return when (val result = matchmakingService.updateLobby(dto)) {
             is UpdateLobbyResult.Success -> result.lobby
             is UpdateLobbyResult.LobbyNotFound -> throw lobbyNotFoundException(id)
-            is UpdateLobbyResult.NameConflict -> throw nameConflictException(result.name)
             is UpdateLobbyResult.LobbyDetailsNotValid -> throw ApiException.invalidBody(result.errors)
-            is UpdateLobbyResult.RequestingPlayerNotAnOwner ->
-                throw ApiException.forbidden("Requesting player is not an owner of the lobby")
+            is UpdateLobbyResult.RequestingPlayerNotAnOwner -> throw ownershipOfTheLobbyRequiredException()
         }
     }
 
@@ -58,7 +56,7 @@ class LobbyController(private val matchmakingService: MatchmakingService) {
         return when (matchmakingService.deleteLobby(dto)) {
             is DeleteLobbyResult.Deleted -> Unit
             is DeleteLobbyResult.RequestingPlayerNotAnOwner ->
-                throw ApiException.forbidden("Requesting player is not an owner of the lobby")
+                throw ownershipOfTheLobbyRequiredException()
             is DeleteLobbyResult.LobbyNotFound -> throw lobbyNotFoundException(id)
         }
     }
@@ -104,6 +102,26 @@ class LobbyController(private val matchmakingService: MatchmakingService) {
     fun getActiveLobbiesOfAPlayer(): List<LobbyDto> =
             matchmakingService.getActiveLobbiesOfAPLayer(getAuthenticatedUserId())
 
+    @PostMapping("/{id}/start-game")
+    fun startGame(@PathVariable id: UUID): GameDto {
+        val dto = StartGameDto(
+                lobbyId = id,
+                requestingPlayerId = getAuthenticatedUserId()
+        )
+        return when (val result = matchmakingService.startGame(dto)) {
+            is StartGameResult.Success -> result.game
+            is StartGameResult.LobbyNotFound ->
+                throw lobbyNotFoundException(id)
+            is StartGameResult.NotEnoughPlayers ->
+                throw ApiException.unprocessableEntity(
+                        "Not enough players to start game",
+                        mapOf("currentPlayersCount" to result.currentPlayersCount)
+                )
+            is StartGameResult.RequestingPlayerNotAnOwner ->
+                throw ownershipOfTheLobbyRequiredException()
+        }
+    }
+
     private fun lobbyNotFoundException(id: UUID) = ApiException.resourceNotFound("lobby", id)
 
     private fun nameConflictException(name: String) =
@@ -113,4 +131,7 @@ class LobbyController(private val matchmakingService: MatchmakingService) {
                             "cause" to "NAME_CONFLICT"
                     )
             )
+
+    private fun ownershipOfTheLobbyRequiredException() =
+            ApiException.forbidden("Requesting player is not an owner of the lobby")
 }

@@ -26,4 +26,9 @@ object Fixture {
             lobbyId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
             requestingPlayerId = UUID.fromString("ae312d19-71f0-4078-999a-a3d559c3fb2b")
     )
+    val START_GAME_DTO = StartGameDto(
+            lobbyId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
+            requestingPlayerId = UUID.fromString("3e8d0140-105c-4d1b-95e6-6b655aad53f0")
+    )
+    val NEW_GAME_ID: UUID = UUID.fromString("0d3ada42-37f3-4bbf-bd97-90c5633e1b37")
 }

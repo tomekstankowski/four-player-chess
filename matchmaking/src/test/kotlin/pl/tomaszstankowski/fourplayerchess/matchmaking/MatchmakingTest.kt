@@ -1,16 +1,17 @@
 package pl.tomaszstankowski.fourplayerchess.matchmaking
 
+import org.amshove.kluent.mock
 import org.amshove.kluent.shouldBeEqualTo
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.specification.describe
-import org.springframework.transaction.support.TransactionOperations
-import org.springframework.util.SimpleIdGenerator
 import pl.tomaszstankowski.fourplayerchess.common.validation.ValidationError
 import pl.tomaszstankowski.fourplayerchess.matchmaking.Fixture.CREATE_LOBBY_DTO
 import pl.tomaszstankowski.fourplayerchess.matchmaking.Fixture.DELETE_LOBBY_DTO
 import pl.tomaszstankowski.fourplayerchess.matchmaking.Fixture.JOIN_LOBBY_DTO
 import pl.tomaszstankowski.fourplayerchess.matchmaking.Fixture.LEAVE_LOBBY_DTO
+import pl.tomaszstankowski.fourplayerchess.matchmaking.Fixture.NEW_GAME_ID
 import pl.tomaszstankowski.fourplayerchess.matchmaking.Fixture.NOW
+import pl.tomaszstankowski.fourplayerchess.matchmaking.Fixture.START_GAME_DTO
 import pl.tomaszstankowski.fourplayerchess.matchmaking.Fixture.UPDATE_LOBBY_DTO
 import java.time.Clock
 import java.time.ZoneId
@@ -18,37 +19,14 @@ import java.util.*
 
 class MatchmakingTest : Spek({
 
-    fun createServiceForTesting(): MatchmakingService {
-        val dataSource = InMemoryDataSource()
-        return MatchmakingService.create(
-                clock = Clock.fixed(NOW, ZoneId.of("UTC")),
-                idGenerator = SimpleIdGenerator(),
-                lobbyRepository = InMemoryLobbyRepository(dataSource),
-                lobbyMembershipRepository = InMemoryLobbyMembershipRepository(dataSource),
-                transactionOperations = TransactionOperations.withoutTransaction()
-        )
-    }
-
-    describe("create lobby") {
-
-        it("should return error when name is already used") {
-            val service = createServiceForTesting()
-            service.createLobby(
-                    CREATE_LOBBY_DTO.copy(
-                            lobbyEditableDetails = LobbyEditableDetails(name = "Pokój #1"),
-                            requestingPlayerId = UUID.fromString("b416265f-4e7b-4fe7-9c58-ef8e692dea7f")
-                    )
+    fun createServiceForTesting() =
+            MatchmakingService.create(
+                    clock = Clock.fixed(NOW, ZoneId.of("UTC")),
+                    createGameUseCase = TestCreateGameUseCase(NEW_GAME_ID),
+                    simpMessageSendingOperations = mock()
             )
 
-            val result = service.createLobby(
-                    CREATE_LOBBY_DTO.copy(
-                            lobbyEditableDetails = LobbyEditableDetails(name = "Pokój #1"),
-                            requestingPlayerId = UUID.fromString("1b07f216-c96f-4cf7-90a5-bf2eac87d09b")
-                    )
-            )
-
-            result shouldBeEqualTo CreateLobbyResult.NameConflict(name = "Pokój #1")
-        }
+    describe("creating lobby") {
 
         it("should return error when lobby details are not valid") {
             val service = createServiceForTesting()
@@ -68,7 +46,8 @@ class MatchmakingTest : Spek({
         it("should return created lobby") {
             val service = createServiceForTesting()
             val dto = CREATE_LOBBY_DTO.copy(
-                    lobbyEditableDetails = LobbyEditableDetails(name = "Pokój testowy!")
+                    lobbyEditableDetails = LobbyEditableDetails(name = "Pokój testowy!"),
+                    requestingPlayerId = UUID.fromString("085076e1-c697-4a1a-aa42-c0055e0749a3")
             )
             val result = service.createLobby(dto)
 
@@ -76,7 +55,8 @@ class MatchmakingTest : Spek({
                     LobbyDto(
                             id = UUID.fromString("00000000-0000-0000-0000-000000000001"),
                             name = "Pokój testowy!",
-                            createdAt = NOW
+                            createdAt = NOW,
+                            ownerId = UUID.fromString("085076e1-c697-4a1a-aa42-c0055e0749a3")
                     )
             )
         }
@@ -84,7 +64,8 @@ class MatchmakingTest : Spek({
         it("should persist created lobby") {
             val service = createServiceForTesting()
             val dto = CREATE_LOBBY_DTO.copy(
-                    lobbyEditableDetails = LobbyEditableDetails(name = "Pokój testowy!")
+                    lobbyEditableDetails = LobbyEditableDetails(name = "Pokój testowy!"),
+                    requestingPlayerId = UUID.fromString("b4c7e97c-3991-40e4-b632-62fcbd1cb0ce")
             )
 
             service.createLobby(dto)
@@ -94,7 +75,8 @@ class MatchmakingTest : Spek({
                     LobbyDto(
                             id = UUID.fromString("00000000-0000-0000-0000-000000000001"),
                             name = "Pokój testowy!",
-                            createdAt = NOW
+                            createdAt = NOW,
+                            ownerId = UUID.fromString("b4c7e97c-3991-40e4-b632-62fcbd1cb0ce")
                     )
         }
 
@@ -115,7 +97,7 @@ class MatchmakingTest : Spek({
         }
     }
 
-    describe("update lobby") {
+    describe("updating lobby") {
 
         it("should return error when lobby not found") {
             val service = createServiceForTesting()
@@ -127,32 +109,6 @@ class MatchmakingTest : Spek({
             result shouldBeEqualTo UpdateLobbyResult.LobbyNotFound(
                     lobbyId = UUID.fromString("8c3d359b-6f40-44b1-8d8c-e69958c8ac02")
             )
-        }
-
-        it("should return error when lobby name is already used") {
-            val service = createServiceForTesting()
-            service.createLobby(
-                    CREATE_LOBBY_DTO.copy(
-                            lobbyEditableDetails = LobbyEditableDetails(name = "Pokój pierwszy"),
-                            requestingPlayerId = UUID.fromString("e389d50c-1861-48e9-8c41-66f1d2b8fba1")
-                    )
-            )
-            service.createLobby(
-                    CREATE_LOBBY_DTO.copy(
-                            lobbyEditableDetails = LobbyEditableDetails(name = "Pokój drugi"),
-                            requestingPlayerId = UUID.fromString("439628c1-eafd-4e75-b37d-18512e1546ab")
-                    )
-            )
-
-            val result = service.updateLobby(
-                    UPDATE_LOBBY_DTO.copy(
-                            lobbyId = UUID.fromString("00000000-0000-0000-0000-000000000002"),
-                            lobbyEditableDetails = LobbyEditableDetails(name = "Pokój pierwszy"),
-                            requestingPlayerId = UUID.fromString("439628c1-eafd-4e75-b37d-18512e1546ab")
-                    )
-            )
-
-            result shouldBeEqualTo UpdateLobbyResult.NameConflict("Pokój pierwszy")
         }
 
         it("should return error when lobby details are invalid") {
@@ -204,7 +160,8 @@ class MatchmakingTest : Spek({
                     LobbyDto(
                             id = UUID.fromString("00000000-0000-0000-0000-000000000001"),
                             name = "Pokój produkcyjny",
-                            createdAt = NOW
+                            createdAt = NOW,
+                            ownerId = CREATE_LOBBY_DTO.requestingPlayerId
                     )
             )
         }
@@ -229,12 +186,13 @@ class MatchmakingTest : Spek({
             lobby shouldBeEqualTo LobbyDto(
                     id = UUID.fromString("00000000-0000-0000-0000-000000000001"),
                     name = "Pokój produkcyjny",
-                    createdAt = NOW
+                    createdAt = NOW,
+                    ownerId = CREATE_LOBBY_DTO.requestingPlayerId
             )
         }
     }
 
-    describe("delete lobby") {
+    describe("deleting lobby") {
 
         it("should return error when lobby not found") {
             val service = createServiceForTesting()
@@ -330,7 +288,7 @@ class MatchmakingTest : Spek({
         }
     }
 
-    describe("join lobby") {
+    describe("joining lobby") {
 
         it("should return error if lobby not found") {
             val service = createServiceForTesting()
@@ -428,7 +386,7 @@ class MatchmakingTest : Spek({
         }
     }
 
-    describe("leave lobby") {
+    describe("leaving lobby") {
 
         it("should return error when lobby not found") {
             val service = createServiceForTesting()
@@ -509,6 +467,84 @@ class MatchmakingTest : Spek({
                             joinedAt = NOW
                     )
             )
+        }
+    }
+
+    describe("starting game") {
+
+        it("should return error if lobby not found") {
+            val service = createServiceForTesting()
+
+            val result = service.startGame(
+                    START_GAME_DTO.copy(lobbyId = UUID.fromString("800d8d75-e202-40e3-9d39-f44abdd6c4d4"))
+            )
+
+            result shouldBeEqualTo StartGameResult.LobbyNotFound(
+                    UUID.fromString("800d8d75-e202-40e3-9d39-f44abdd6c4d4")
+            )
+        }
+
+        it("should return error if lobby does not have enough players") {
+            val service = createServiceForTesting()
+            service.createLobby(
+                    CREATE_LOBBY_DTO.copy(requestingPlayerId = UUID.fromString("7e96c0c5-f2d3-487e-a98e-ba1cbb30032d"))
+            )
+            service.joinLobby(
+                    JOIN_LOBBY_DTO.copy(requestingPlayerId = UUID.fromString("ce87bf42-863b-4399-8395-9bb88e41d9eb"))
+            )
+            service.joinLobby(
+                    JOIN_LOBBY_DTO.copy(requestingPlayerId = UUID.fromString("df0c3aec-5015-4dcc-87a7-3c56555ba685"))
+            )
+
+            val result = service.startGame(
+                    START_GAME_DTO.copy(requestingPlayerId = UUID.fromString("7e96c0c5-f2d3-487e-a98e-ba1cbb30032d"))
+            )
+
+            result shouldBeEqualTo StartGameResult.NotEnoughPlayers(currentPlayersCount = 3)
+        }
+
+        it("should return error if requesting player is not an owner") {
+            val service = createServiceForTesting()
+            service.createLobby(
+                    CREATE_LOBBY_DTO.copy(requestingPlayerId = UUID.fromString("7e96c0c5-f2d3-487e-a98e-ba1cbb30032d"))
+            )
+            service.joinLobby(
+                    JOIN_LOBBY_DTO.copy(requestingPlayerId = UUID.fromString("ce87bf42-863b-4399-8395-9bb88e41d9eb"))
+            )
+            service.joinLobby(
+                    JOIN_LOBBY_DTO.copy(requestingPlayerId = UUID.fromString("df0c3aec-5015-4dcc-87a7-3c56555ba685"))
+            )
+            service.joinLobby(
+                    JOIN_LOBBY_DTO.copy(requestingPlayerId = UUID.fromString("00a4c233-81ed-42e4-a7ca-77da6074f6a7"))
+            )
+
+            val result = service.startGame(
+                    START_GAME_DTO.copy(requestingPlayerId = UUID.fromString("df0c3aec-5015-4dcc-87a7-3c56555ba685"))
+            )
+
+            result shouldBeEqualTo StartGameResult.RequestingPlayerNotAnOwner
+        }
+
+        it("should return new game") {
+            val service = createServiceForTesting()
+            service.createLobby(
+                    CREATE_LOBBY_DTO.copy(requestingPlayerId = UUID.fromString("7e96c0c5-f2d3-487e-a98e-ba1cbb30032d"))
+            )
+            service.joinLobby(
+                    JOIN_LOBBY_DTO.copy(requestingPlayerId = UUID.fromString("ce87bf42-863b-4399-8395-9bb88e41d9eb"))
+            )
+            service.joinLobby(
+                    JOIN_LOBBY_DTO.copy(requestingPlayerId = UUID.fromString("df0c3aec-5015-4dcc-87a7-3c56555ba685"))
+            )
+            service.joinLobby(
+                    JOIN_LOBBY_DTO.copy(requestingPlayerId = UUID.fromString("00a4c233-81ed-42e4-a7ca-77da6074f6a7"))
+            )
+
+            val result = service.startGame(
+                    START_GAME_DTO.copy(requestingPlayerId = UUID.fromString("7e96c0c5-f2d3-487e-a98e-ba1cbb30032d"))
+            )
+
+            result shouldBeEqualTo StartGameResult.Success(GameDto(NEW_GAME_ID))
         }
     }
 })

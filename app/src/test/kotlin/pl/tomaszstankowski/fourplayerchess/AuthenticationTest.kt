@@ -8,7 +8,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 
-class AuthenticationIntegrationTest : IntegrationTest() {
+class AuthenticationTest : IntegrationTest() {
 
     @Autowired
     private lateinit var mockMvc: MockMvc
@@ -42,7 +42,7 @@ class AuthenticationIntegrationTest : IntegrationTest() {
 
     @Test
     fun `cannot access secured endpoints without authentication`() {
-        mockMvc.get("/lobbies")
+        mockMvc.get("/lobbies/{id}", "8b59c74f-4897-42cc-bced-c2fed1899992")
                 .andExpect {
                     status { isUnauthorized }
                 }
