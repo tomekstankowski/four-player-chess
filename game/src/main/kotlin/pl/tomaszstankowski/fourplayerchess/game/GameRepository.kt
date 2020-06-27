@@ -12,5 +12,5 @@ internal interface GameRepository {
 
     fun findByPlayerId(playerId: UUID): List<Game>
 
-    fun findByIsCommittedIsTrueAndIsCancelledIsFalse(): List<Game>
+    fun findByIsCommittedIsTrueAndIsCancelledIsFalseAndIsFinishedIsFalse(): List<Game>
 }

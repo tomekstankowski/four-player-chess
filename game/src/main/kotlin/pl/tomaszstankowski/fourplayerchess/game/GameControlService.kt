@@ -17,8 +17,7 @@ import java.util.*
 import javax.sql.DataSource
 import kotlin.random.Random
 
-class GameControlService internal constructor(private val idGenerator: IdGenerator,
-                                              private val clock: Clock,
+class GameControlService internal constructor(private val gameFactory: GameFactory,
                                               private val random: Random,
                                               private val transactionOperations: TransactionOperations,
                                               private val gameRepository: GameRepository,
@@ -64,8 +63,7 @@ class GameControlService internal constructor(private val idGenerator: IdGenerat
                            gamePlayerRepository: GamePlayerRepository,
                            messageSendingOperations: SimpMessageSendingOperations): GameControlService {
             return GameControlService(
-                    idGenerator = idGenerator,
-                    clock = clock,
+                    gameFactory = GameFactory(idGenerator, clock),
                     random = random,
                     transactionOperations = transactionOperations,
                     gameRepository = gameRepository,
@@ -77,12 +75,7 @@ class GameControlService internal constructor(private val idGenerator: IdGenerat
     }
 
     fun createGame(dto: CreateGameDto): GameDto {
-        val game = Game(
-                id = idGenerator.generateId(),
-                createdAt = clock.instant(),
-                isCommitted = false,
-                isCancelled = false
-        )
+        val game = gameFactory.createGame()
         val gamePlayers = dto.playersIds
                 .shuffled(random)
                 .mapIndexed { index, id ->
@@ -134,10 +127,7 @@ class GameControlService internal constructor(private val idGenerator: IdGenerat
             return GetGameStateResult.GameNotActive
         }
         val engineInstance = engineInstanceStore.get(gameId) ?: throw IllegalStateException()
-        val state = engineInstance.state
-        val stateFeatures = engineInstance.stateFeatures
-        val legalMoves = engineInstance.legalMoves
-        val gameState = GameStateDto.create(state, stateFeatures, legalMoves)
+        val gameState = engineInstance.getGameStateDto()
         return GetGameStateResult.Success(gameState)
     }
 
@@ -177,21 +167,24 @@ class GameControlService internal constructor(private val idGenerator: IdGenerat
                                 .map { it.toJsonStr() },
                         given = dto.promotionPiece!!
                 )
-        val result = engineInstance.makeMove(moveClaim)
-        if (!result) {
+        val isMoveValid = engineInstanceStore.synchronized(gameId) { engine -> engine.makeMove(moveClaim) }
+                ?: throw IllegalStateException()
+        if (!isMoveValid) {
             return MakeMoveResult.Error.IllegalMove
         }
-        val state = engineInstance.state
-        val stateFeatures = engineInstance.stateFeatures
-        val legalMoves = engineInstance.legalMoves
-        val newGameState = GameStateDto.create(state, stateFeatures, legalMoves)
+        if (engineInstance.isGameOver) {
+            val finishedGame = game.copy(isFinished = true)
+            gameRepository.update(finishedGame)
+            engineInstanceStore.remove(gameId)
+        }
+        val newGameState = engineInstance.getGameStateDto()
         gameMessageBroker.sendMoveMadeMessage(gameId, newGameState, move.toDto())
         return MakeMoveResult.Success(newGameState)
     }
 
     fun cancelAllActiveGames() {
         transactionOperations.executeWithoutResult {
-            gameRepository.findByIsCommittedIsTrueAndIsCancelledIsFalse()
+            gameRepository.findByIsCommittedIsTrueAndIsCancelledIsFalseAndIsFinishedIsFalse()
                     .forEach { game ->
                         val cancelledGame = game.copy(isCancelled = true)
                         gameRepository.update(cancelledGame)
@@ -203,4 +196,13 @@ class GameControlService internal constructor(private val idGenerator: IdGenerat
     private fun getCommittedGame(id: UUID) =
             gameRepository.findById(id)
                     ?.takeIf { it.isCommitted }
+
+    private fun Engine.getGameStateDto() =
+            GameStateDto.create(
+                    state = state,
+                    stateFeatures = stateFeatures,
+                    legalMoves = legalMoves,
+                    isFinished = isGameOver,
+                    winningColor = winningColor
+            )
 }

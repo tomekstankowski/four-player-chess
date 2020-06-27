@@ -27,8 +27,8 @@ internal class InMemoryGameRepository(private val dataSource: InMemoryDataSource
                 dataSource.gamePlayers.any { it.playerId == playerId && it.gameId == game.id }
             }
 
-    override fun findByIsCommittedIsTrueAndIsCancelledIsFalse(): List<Game> =
+    override fun findByIsCommittedIsTrueAndIsCancelledIsFalseAndIsFinishedIsFalse(): List<Game> =
             dataSource.games.filter {
-                it.isCommitted && !it.isCancelled
+                it.isCommitted && !it.isCancelled && !it.isFinished
             }
 }

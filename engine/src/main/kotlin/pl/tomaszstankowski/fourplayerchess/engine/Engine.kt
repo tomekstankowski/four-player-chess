@@ -53,6 +53,9 @@ class Engine(state: State) {
     }
 
     fun makeMove(moveClaim: MoveClaim): Boolean {
+        if (isGameOver) {
+            return false
+        }
         val isValidMove = legalMoves.any { move ->
             move == moveClaim.move
                     && (moveClaim !is PromotionMoveClaim || move.isPawnPromotion(state))

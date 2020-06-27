@@ -8,6 +8,7 @@ internal object GameTable {
         const val CREATED_AT = "created_at"
         const val COMMITTED = "committed"
         const val CANCELLED = "cancelled"
+        const val FINISHED = "finished"
     }
 }
 

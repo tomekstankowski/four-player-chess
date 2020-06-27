@@ -10,13 +10,15 @@ data class CreateGameDto(val playersIds: Set<UUID>)
 
 data class GameDto(val id: UUID,
                    val createdAt: Instant,
-                   val isCancelled: Boolean)
+                   val isCancelled: Boolean,
+                   val isFinished: Boolean)
 
 internal fun Game.toDto() =
         GameDto(
                 id = id,
                 createdAt = createdAt,
-                isCancelled = isCancelled
+                isCancelled = isCancelled,
+                isFinished = isFinished
         )
 
 data class GamePlayerDto(
@@ -41,11 +43,17 @@ data class GameStateDto(
         val eliminatedColors: List<String>,
         val nextMoveColor: String,
         val colorsInCheck: List<String>,
-        val legalMoves: List<LegalMoveDto>
+        val legalMoves: List<LegalMoveDto>,
+        val isFinished: Boolean,
+        val winningColor: String?
 ) {
 
     companion object {
-        internal fun create(state: State, stateFeatures: StateFeatures, legalMoves: List<Move>) =
+        internal fun create(state: State,
+                            stateFeatures: StateFeatures,
+                            legalMoves: List<Move>,
+                            isFinished: Boolean,
+                            winningColor: Color?) =
                 GameStateDto(
                         board = state.squares.map { row ->
                             row.mapNotNull { squareOpt -> squareOpt?.toJsonStr() }
@@ -56,7 +64,9 @@ data class GameStateDto(
                             if (checks.isEmpty()) null
                             else color.toJsonStr()
                         },
-                        legalMoves = legalMoves.map { it.toDto() }
+                        legalMoves = legalMoves.map { it.toDto() },
+                        isFinished = isFinished,
+                        winningColor = winningColor?.toJsonStr()
                 )
     }
 }

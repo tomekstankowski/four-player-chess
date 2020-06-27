@@ -7,10 +7,11 @@ import java.util.*
 internal data class Game(val id: UUID,
                          val createdAt: Instant,
                          val isCommitted: Boolean,
-                         val isCancelled: Boolean) {
+                         val isCancelled: Boolean,
+                         val isFinished: Boolean) {
 
     internal val isActive: Boolean
-        get() = isCommitted && !isCancelled
+        get() = isCommitted && !isCancelled && !isFinished
 }
 
 internal data class GamePlayer(val gameId: UUID,

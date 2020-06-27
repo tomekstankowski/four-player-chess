@@ -21,6 +21,7 @@ class GameControlTest : IntegrationTest() {
                     jsonPath("id") { value(Game.ID) }
                     jsonPath("createdAt") { value(Game.CREATED_AT) }
                     jsonPath("isCancelled") { value(Game.IS_CANCELLED) }
+                    jsonPath("isFinished") { value(Game.IS_FINISHED) }
                 }
     }
 
@@ -58,4 +59,5 @@ object Game {
     const val ID = "3cc49522-81f2-44d1-a73c-8ba35dddc219"
     const val CREATED_AT = "2020-06-24T21:13:02Z"
     const val IS_CANCELLED = false
+    const val IS_FINISHED = false
 }

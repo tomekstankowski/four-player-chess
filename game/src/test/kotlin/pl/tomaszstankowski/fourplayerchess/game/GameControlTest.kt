@@ -32,7 +32,8 @@ class GameControlTest : Spek({
             game shouldBeEqualTo GameDto(
                     id = UUID.fromString("00000000-0000-0000-0000-000000000001"),
                     createdAt = Instant.parse(NOW),
-                    isCancelled = false
+                    isCancelled = false,
+                    isFinished = false
             )
         }
 
@@ -44,7 +45,7 @@ class GameControlTest : Spek({
             game shouldBeEqualTo null
         }
 
-        it("game should not be accessible after commit") {
+        it("game should be accessible after commit") {
             val service = createServiceForTesting()
             service.createGame(CREATE_GAME_DTO)
             service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
@@ -53,7 +54,8 @@ class GameControlTest : Spek({
             game shouldBeEqualTo GameDto(
                     id = UUID.fromString("00000000-0000-0000-0000-000000000001"),
                     createdAt = Instant.parse(NOW),
-                    isCancelled = false
+                    isCancelled = false,
+                    isFinished = false
             )
         }
 
@@ -168,12 +170,14 @@ class GameControlTest : Spek({
                     GameDto(
                             id = UUID.fromString("00000000-0000-0000-0000-000000000001"),
                             createdAt = Instant.parse(NOW),
-                            isCancelled = false
+                            isCancelled = false,
+                            isFinished = false
                     ),
                     GameDto(
                             id = UUID.fromString("00000000-0000-0000-0000-000000000002"),
                             createdAt = Instant.parse(NOW),
-                            isCancelled = false
+                            isCancelled = false,
+                            isFinished = false
                     )
             )
         }
@@ -252,8 +256,53 @@ class GameControlTest : Spek({
 
             val result = service.getGameState(UUID.fromString("00000000-0000-0000-0000-000000000001"))
 
-            // TODO convert to real object
-            result.toString() shouldBeEqualTo "Success(gameState=GameStateDto(board=[[rR, rN, rB, rQ, rK, rB, rN, rR], [rP, rP, rP, rP, rP, rP, rP, rP], [, , , , , , , ], [bR, bP, , , , , , , , , , , gP, gR], [bN, bP, , , , , , , , , , , gP, gN], [bB, bP, , , , , , , , , , , gP, gB], [bQ, bP, , , , , , , , , , , gP, gK], [bK, bP, , , , , , , , , , , gP, gQ], [bB, bP, , , , , , , , , , , gP, gB], [bN, bP, , , , , , , , , , , gP, gN], [bR, bP, , , , , , , , , , , gP, gR], [, , , , , , , ], [yP, yP, yP, yP, yP, yP, yP, yP], [yR, yN, yB, yK, yQ, yB, yN, yR]], eliminatedColors=[], nextMoveColor=red, colorsInCheck=[], legalMoves=[LegalMoveDto(from=d2, to=d3), LegalMoveDto(from=d2, to=d4), LegalMoveDto(from=e1, to=f3), LegalMoveDto(from=e1, to=d3), LegalMoveDto(from=e2, to=e3), LegalMoveDto(from=e2, to=e4), LegalMoveDto(from=f2, to=f3), LegalMoveDto(from=f2, to=f4), LegalMoveDto(from=g2, to=g3), LegalMoveDto(from=g2, to=g4), LegalMoveDto(from=h2, to=h3), LegalMoveDto(from=h2, to=h4), LegalMoveDto(from=i2, to=i3), LegalMoveDto(from=i2, to=i4), LegalMoveDto(from=j1, to=k3), LegalMoveDto(from=j1, to=i3), LegalMoveDto(from=j2, to=j3), LegalMoveDto(from=j2, to=j4), LegalMoveDto(from=k2, to=k3), LegalMoveDto(from=k2, to=k4)]))"
+            result shouldBeEqualTo GetGameStateResult.Success(
+                    GameStateDto(
+                            board = listOf(
+                                    listOf("rR", "rN", "rB", "rQ", "rK", "rB", "rN", "rR"),
+                                    listOf("rP", "rP", "rP", "rP", "rP", "rP", "rP", "rP"),
+                                    listOf("", "", "", "", "", "", "", ""),
+                                    listOf("bR", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gR"),
+                                    listOf("bN", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gN"),
+                                    listOf("bB", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gB"),
+                                    listOf("bQ", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gK"),
+                                    listOf("bK", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gQ"),
+                                    listOf("bB", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gB"),
+                                    listOf("bN", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gN"),
+                                    listOf("bR", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gR"),
+                                    listOf("", "", "", "", "", "", "", ""),
+                                    listOf("yP", "yP", "yP", "yP", "yP", "yP", "yP", "yP"),
+                                    listOf("yR", "yN", "yB", "yK", "yQ", "yB", "yN", "yR")
+                            ),
+                            eliminatedColors = emptyList(),
+                            nextMoveColor = "red",
+                            colorsInCheck = emptyList(),
+                            legalMoves = listOf(
+                                    LegalMoveDto("d2", "d3"),
+                                    LegalMoveDto("d2", "d4"),
+                                    LegalMoveDto("e1", "f3"),
+                                    LegalMoveDto("e1", "d3"),
+                                    LegalMoveDto("e2", "e3"),
+                                    LegalMoveDto("e2", "e4"),
+                                    LegalMoveDto("f2", "f3"),
+                                    LegalMoveDto("f2", "f4"),
+                                    LegalMoveDto("g2", "g3"),
+                                    LegalMoveDto("g2", "g4"),
+                                    LegalMoveDto("h2", "h3"),
+                                    LegalMoveDto("h2", "h4"),
+                                    LegalMoveDto("i2", "i3"),
+                                    LegalMoveDto("i2", "i4"),
+                                    LegalMoveDto("j1", "k3"),
+                                    LegalMoveDto("j1", "i3"),
+                                    LegalMoveDto("j2", "j3"),
+                                    LegalMoveDto("j2", "j4"),
+                                    LegalMoveDto("k2", "k3"),
+                                    LegalMoveDto("k2", "k4")
+                            ),
+                            isFinished = false,
+                            winningColor = null
+                    )
+            )
         }
     }
 
@@ -410,8 +459,53 @@ class GameControlTest : Spek({
 
             val result = service.makeMove(MAKE_MOVE_DTO)
 
-            // TODO
-            result.toString() shouldBeEqualTo "Success(newGameState=GameStateDto(board=[[rR, rN, rB, rQ, rK, rB, rN, rR], [, rP, rP, rP, rP, rP, rP, rP], [rP, , , , , , , ], [bR, bP, , , , , , , , , , , gP, gR], [bN, bP, , , , , , , , , , , gP, gN], [bB, bP, , , , , , , , , , , gP, gB], [bQ, bP, , , , , , , , , , , gP, gK], [bK, bP, , , , , , , , , , , gP, gQ], [bB, bP, , , , , , , , , , , gP, gB], [bN, bP, , , , , , , , , , , gP, gN], [bR, bP, , , , , , , , , , , gP, gR], [, , , , , , , ], [yP, yP, yP, yP, yP, yP, yP, yP], [yR, yN, yB, yK, yQ, yB, yN, yR]], eliminatedColors=[], nextMoveColor=blue, colorsInCheck=[], legalMoves=[LegalMoveDto(from=a5, to=c6), LegalMoveDto(from=a5, to=c4), LegalMoveDto(from=a10, to=c11), LegalMoveDto(from=a10, to=c9), LegalMoveDto(from=b4, to=c4), LegalMoveDto(from=b4, to=d4), LegalMoveDto(from=b5, to=c5), LegalMoveDto(from=b5, to=d5), LegalMoveDto(from=b6, to=c6), LegalMoveDto(from=b6, to=d6), LegalMoveDto(from=b7, to=c7), LegalMoveDto(from=b7, to=d7), LegalMoveDto(from=b8, to=c8), LegalMoveDto(from=b8, to=d8), LegalMoveDto(from=b9, to=c9), LegalMoveDto(from=b9, to=d9), LegalMoveDto(from=b10, to=c10), LegalMoveDto(from=b10, to=d10), LegalMoveDto(from=b11, to=c11), LegalMoveDto(from=b11, to=d11)]))"
+            result shouldBeEqualTo MakeMoveResult.Success(
+                    GameStateDto(
+                            board = listOf(
+                                    listOf("rR", "rN", "rB", "rQ", "rK", "rB", "rN", "rR"),
+                                    listOf("", "rP", "rP", "rP", "rP", "rP", "rP", "rP"),
+                                    listOf("rP", "", "", "", "", "", "", ""),
+                                    listOf("bR", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gR"),
+                                    listOf("bN", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gN"),
+                                    listOf("bB", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gB"),
+                                    listOf("bQ", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gK"),
+                                    listOf("bK", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gQ"),
+                                    listOf("bB", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gB"),
+                                    listOf("bN", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gN"),
+                                    listOf("bR", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gR"),
+                                    listOf("", "", "", "", "", "", "", ""),
+                                    listOf("yP", "yP", "yP", "yP", "yP", "yP", "yP", "yP"),
+                                    listOf("yR", "yN", "yB", "yK", "yQ", "yB", "yN", "yR")
+                            ),
+                            eliminatedColors = emptyList(),
+                            nextMoveColor = "blue",
+                            colorsInCheck = emptyList(),
+                            legalMoves = listOf(
+                                    LegalMoveDto("a5", "c6"),
+                                    LegalMoveDto("a5", "c4"),
+                                    LegalMoveDto("a10", "c11"),
+                                    LegalMoveDto("a10", "c9"),
+                                    LegalMoveDto("b4", "c4"),
+                                    LegalMoveDto("b4", "d4"),
+                                    LegalMoveDto("b5", "c5"),
+                                    LegalMoveDto("b5", "d5"),
+                                    LegalMoveDto("b6", "c6"),
+                                    LegalMoveDto("b6", "d6"),
+                                    LegalMoveDto("b7", "c7"),
+                                    LegalMoveDto("b7", "d7"),
+                                    LegalMoveDto("b8", "c8"),
+                                    LegalMoveDto("b8", "d8"),
+                                    LegalMoveDto("b9", "c9"),
+                                    LegalMoveDto("b9", "d9"),
+                                    LegalMoveDto("b10", "c10"),
+                                    LegalMoveDto("b10", "d10"),
+                                    LegalMoveDto("b11", "c11"),
+                                    LegalMoveDto("b11", "d11")
+                            ),
+                            isFinished = false,
+                            winningColor = null
+                    )
+            )
         }
     }
 

@@ -1,7 +1,6 @@
 package pl.tomaszstankowski.fourplayerchess.web
 
 import org.springframework.messaging.handler.annotation.DestinationVariable
-import org.springframework.messaging.handler.annotation.MessageExceptionHandler
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -39,8 +38,8 @@ class GameController(private val gameControlService: GameControlService) {
                 is GetGameStateResult.GameNotActive -> throw ApiException.unprocessableEntity("Game is not active")
             }
 
-    @MessageMapping("/games/{gameId}/moves")
-    fun makeMove(@DestinationVariable gameId: UUID, msg: MakeMoveMessage, principal: Principal): MoveMadeMessage {
+    @MessageMapping("/games/{gameId}/make-move")
+    fun makeMove(@DestinationVariable gameId: UUID, msg: MakeMoveMessage, principal: Principal): MakeMoveResponse {
         val dto = MakeMoveDto(
                 gameId = gameId,
                 playerId = UUID.fromString(principal.name),
@@ -49,25 +48,22 @@ class GameController(private val gameControlService: GameControlService) {
                 promotionPiece = msg.promotionPiece
         )
         return when (val result = gameControlService.makeMove(dto)) {
-            is MakeMoveResult.Success -> MoveMadeMessage(
-                    newGameState = result.newGameState,
-                    move = LegalMoveDto(from = dto.from, to = dto.to)
+            is MakeMoveResult.Success -> MakeMoveResponse(
+                    payload = MakeMoveResponsePayload(result.newGameState, LegalMoveDto(from = dto.from, to = dto.to)),
+                    error = null
             )
-            is MakeMoveResult.Error -> throw MakeMoveException(result.message)
+            is MakeMoveResult.Error -> MakeMoveResponse(
+                    payload = null,
+                    error = result.message
+            )
         }
     }
-
-    @MessageExceptionHandler
-    fun handleUnknownException(e: Exception): String = "Internal server error"
-
-    @MessageExceptionHandler
-    fun handleMakeMoveException(e: MakeMoveException): String =
-            e.message ?: ""
 }
-
-class MakeMoveException(msg: String) : RuntimeException(msg)
 
 data class MakeMoveMessage(val from: String, val to: String, val promotionPiece: String?)
 
-data class MoveMadeMessage(val newGameState: GameStateDto,
-                           val move: LegalMoveDto)
+data class MakeMoveResponse(val payload: MakeMoveResponsePayload?,
+                            val error: String?)
+
+data class MakeMoveResponsePayload(val newGameState: GameStateDto,
+                                   val move: LegalMoveDto)

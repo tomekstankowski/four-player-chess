@@ -21,8 +21,8 @@ VALUES ('78004565-85e8-4258-bd7e-cebe59571284', 'df1a63de-c6b9-4383-ab56-761e333
        ('c84ca410-d97a-4ef5-8fb3-e59309848c96', '23a79093-ce9f-4387-a4e1-b10420f2e770', '2020-01-31T22:08:39'),
        ('c84ca410-d97a-4ef5-8fb3-e59309848c96', '18dff866-6aa3-43ac-9385-0547f68bd662', '2020-01-31T22:08:39');
 
-INSERT INTO game (id, created_at, committed, cancelled)
-VALUES ('3cc49522-81f2-44d1-a73c-8ba35dddc219', '2020-06-24T21:13:02', TRUE, FALSE);
+INSERT INTO game (id, created_at, committed, cancelled, finished)
+VALUES ('3cc49522-81f2-44d1-a73c-8ba35dddc219', '2020-06-24T21:13:02', TRUE, FALSE, FALSE);
 
 INSERT INTO game_player(game_id, player_id, color)
 VALUES ('3cc49522-81f2-44d1-a73c-8ba35dddc219', '02d37d81-d1e1-4719-872a-ccab471ea908', 'Red'),

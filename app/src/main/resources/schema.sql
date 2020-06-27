@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS game
     id         UUID PRIMARY KEY,
     created_at TIMESTAMP,
     committed  BOOL,
-    cancelled  BOOL
+    cancelled  BOOL,
+    finished   BOOL
 );
 
 CREATE TABLE IF NOT EXISTS game_player

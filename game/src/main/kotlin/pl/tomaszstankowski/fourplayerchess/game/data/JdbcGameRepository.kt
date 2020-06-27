@@ -11,6 +11,7 @@ import pl.tomaszstankowski.fourplayerchess.game.GameRepository
 import pl.tomaszstankowski.fourplayerchess.game.data.GameTable.Columns.CANCELLED
 import pl.tomaszstankowski.fourplayerchess.game.data.GameTable.Columns.COMMITTED
 import pl.tomaszstankowski.fourplayerchess.game.data.GameTable.Columns.CREATED_AT
+import pl.tomaszstankowski.fourplayerchess.game.data.GameTable.Columns.FINISHED
 import pl.tomaszstankowski.fourplayerchess.game.data.GameTable.Columns.ID
 import java.util.*
 import javax.sql.DataSource
@@ -24,7 +25,8 @@ internal class JdbcGameRepository(dataSource: DataSource) : GameRepository {
                 id = rs.getUUID(ID),
                 createdAt = rs.getInstantAtUTC(CREATED_AT),
                 isCommitted = rs.getBoolean(COMMITTED),
-                isCancelled = rs.getBoolean(CANCELLED)
+                isCancelled = rs.getBoolean(CANCELLED),
+                isFinished = rs.getBoolean(FINISHED)
         )
     }
 
@@ -34,7 +36,8 @@ internal class JdbcGameRepository(dataSource: DataSource) : GameRepository {
                         ID to game.id,
                         CREATED_AT to game.createdAt.toLocalDateTimeAtUTC(),
                         COMMITTED to game.isCommitted,
-                        CANCELLED to game.isCancelled
+                        CANCELLED to game.isCancelled,
+                        FINISHED to game.isFinished
                 )
         )
     }
@@ -44,11 +47,13 @@ internal class JdbcGameRepository(dataSource: DataSource) : GameRepository {
                 "UPDATE ${GameTable.NAME} " +
                         "SET $CREATED_AT = ?, " +
                         "$COMMITTED = ?, " +
-                        "$CANCELLED = ? " +
+                        "$CANCELLED = ?, " +
+                        "$FINISHED = ? " +
                         "WHERE $ID = ?",
                 game.createdAt.toLocalDateTimeAtUTC(),
                 game.isCommitted,
                 game.isCancelled,
+                game.isFinished,
                 game.id
         )
     }
@@ -66,8 +71,8 @@ internal class JdbcGameRepository(dataSource: DataSource) : GameRepository {
         return template.query(sql, rowMapper, playerId)
     }
 
-    override fun findByIsCommittedIsTrueAndIsCancelledIsFalse(): List<Game> {
-        val sql = "SELECT * FROM ${GameTable.NAME} WHERE $COMMITTED = TRUE AND $CANCELLED = FALSE"
+    override fun findByIsCommittedIsTrueAndIsCancelledIsFalseAndIsFinishedIsFalse(): List<Game> {
+        val sql = "SELECT * FROM ${GameTable.NAME} WHERE $COMMITTED = TRUE AND $CANCELLED = FALSE AND $FINISHED = FALSE"
         return template.query(sql, rowMapper)
     }
 }
