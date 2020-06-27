@@ -18,6 +18,14 @@ internal fun makeMove(moveClaim: MoveClaim, state: State): MakeMoveOutcome {
     return getLegalStateAndStateFeatures(pseudoState)
 }
 
+internal fun makeResignation(color: Color, state: State): MakeMoveOutcome {
+    val pseudoState = state.copy(
+            eliminatedColors = state.eliminatedColors + color,
+            nextMoveColor = if (state.nextMoveColor == color) getNewNextMoveColor(state) else state.nextMoveColor
+    )
+    return getLegalStateAndStateFeatures(pseudoState)
+}
+
 private tailrec fun getLegalStateAndStateFeatures(state: State): MakeMoveOutcome {
     val stateFeatures = getStateFeatures(state)
     val legalMoves = genLegalMoves(state, stateFeatures)
@@ -102,13 +110,13 @@ private fun getNewNextMoveColor(state: State): Color {
     return getNewNextMoveColor(state.eliminatedColors, state.nextMoveColor)
 }
 
-private tailrec fun getNewNextMoveColor(eliminatedColors: Set<Color>, color: Color): Color {
-    val newColorIndex = (color.ordinal + 1) % Color.values().size
+private tailrec fun getNewNextMoveColor(eliminatedColors: Set<Color>, currentColor: Color): Color {
+    val newColorIndex = (currentColor.ordinal + 1) % Color.values().size
     val newColor = Color.values()[newColorIndex]
     if (!eliminatedColors.contains(newColor)) {
         return newColor
     }
-    return getNewNextMoveColor(eliminatedColors, newColor)
+    return getNewNextMoveColor(eliminatedColors, currentColor = newColor)
 }
 
 private fun getNewEnPassantSquares(moveClaim: MoveClaim, state: State): EnPassantSquares {

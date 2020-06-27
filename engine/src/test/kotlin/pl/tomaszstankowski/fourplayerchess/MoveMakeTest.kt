@@ -873,4 +873,170 @@ class MoveMakeTest : Spek({
                 )
         )
     }
+
+    test("resign on move") {
+        val engine = createEngineWithStateFromFen("""
+            R-0,1,0,0-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            7,yR,6/
+            5,yK,yP,yR,3,gN,2/
+            2,bK,8,gB,gK,1/
+            bN,2,bP,7,gP,2/
+            9,rB,gP,3/
+            2,bR,5,rK,5/
+            2,bP,4,rP,6/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.submitResignation(Red)
+        val newState = engine.state
+
+        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+            Y-1,1,0,0-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            7,yR,6/
+            5,yK,yP,yR,3,gN,2/
+            2,bK,8,gB,gK,1/
+            bN,2,bP,7,gP,2/
+            9,rB,gP,3/
+            2,bR,5,rK,5/
+            2,bP,4,rP,6/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+    }
+
+    test("resign on move when 1v1") {
+        val engine = createEngineWithStateFromFen("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            7,yR,6/
+            5,yK,yP,yR,3,gN,2/
+            2,bK,8,gB,gK,1/
+            bN,2,bP,7,gP,2/
+            9,rB,gP,3/
+            2,bR,5,rK,5/
+            2,bP,4,rP,6/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.submitResignation(Red)
+        val newState = engine.state
+
+        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+            Y-1,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            7,yR,6/
+            5,yK,yP,yR,3,gN,2/
+            2,bK,8,gB,gK,1/
+            bN,2,bP,7,gP,2/
+            9,rB,gP,3/
+            2,bR,5,rK,5/
+            2,bP,4,rP,6/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+        engine.winningColor shouldBeEqualTo Yellow
+    }
+
+    test("resign not on move when 1v1") {
+        val engine = createEngineWithStateFromFen("""
+            Y-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            7,yR,6/
+            5,yK,yP,yR,3,gN,2/
+            2,bK,8,gB,gK,1/
+            bN,2,bP,7,gP,2/
+            9,rB,gP,3/
+            2,bR,5,rK,5/
+            2,bP,4,rP,6/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.submitResignation(Red)
+        val newState = engine.state
+
+        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+            Y-1,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            7,yR,6/
+            5,yK,yP,yR,3,gN,2/
+            2,bK,8,gB,gK,1/
+            bN,2,bP,7,gP,2/
+            9,rB,gP,3/
+            2,bR,5,rK,5/
+            2,bP,4,rP,6/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+        engine.winningColor shouldBeEqualTo Yellow
+    }
+
+    test("resign not on move") {
+        val engine = createEngineWithStateFromFen("""
+            Y-0,1,0,0-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            7,yR,6/
+            5,yK,yP,yR,3,gN,2/
+            2,bK,8,gB,gK,1/
+            bN,2,bP,7,gP,2/
+            9,rB,gP,3/
+            2,bR,5,rK,5/
+            2,bP,4,rP,6/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.submitResignation(Red)
+        val newState = engine.state
+
+        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+            Y-1,1,0,0-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            7,yR,6/
+            5,yK,yP,yR,3,gN,2/
+            2,bK,8,gB,gK,1/
+            bN,2,bP,7,gP,2/
+            9,rB,gP,3/
+            2,bR,5,rK,5/
+            2,bP,4,rP,6/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+    }
 })

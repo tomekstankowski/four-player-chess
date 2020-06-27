@@ -38,6 +38,9 @@ data class MakeMoveDto(val gameId: UUID,
                        val to: String,
                        val promotionPiece: String?)
 
+data class SubmitResignationDto(val gameId: UUID,
+                                val requestingPlayerId: UUID)
+
 data class GameStateDto(
         val board: List<List<String>>,
         val eliminatedColors: List<String>,

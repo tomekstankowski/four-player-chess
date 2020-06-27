@@ -8,6 +8,7 @@ import pl.tomaszstankowski.fourplayerchess.game.Fixture.CREATE_GAME_DTO
 import pl.tomaszstankowski.fourplayerchess.game.Fixture.MAKE_MOVE_DTO
 import pl.tomaszstankowski.fourplayerchess.game.Fixture.NOW
 import pl.tomaszstankowski.fourplayerchess.game.Fixture.RANDOM_SEED
+import pl.tomaszstankowski.fourplayerchess.game.Fixture.RESIGN_DTO
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -505,6 +506,123 @@ class GameControlTest : Spek({
                             isFinished = false,
                             winningColor = null
                     )
+            )
+        }
+    }
+
+    describe("submitting resignation") {
+
+        it("should return error when game not found") {
+            val service = createServiceForTesting()
+            service.createGame(CREATE_GAME_DTO)
+            service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+
+            val result = service.submitResignation(
+                    RESIGN_DTO.copy(gameId = UUID.fromString("be548e58-1e66-4e73-acf9-0647ca457999"))
+            )
+
+            result shouldBeEqualTo SubmitResignationResult.Error.GameNotFound(
+                    id = UUID.fromString("be548e58-1e66-4e73-acf9-0647ca457999")
+            )
+        }
+
+        it("should return error when game is not active") {
+            val service = createServiceForTesting()
+            service.createGame(CREATE_GAME_DTO)
+            service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+            service.cancelAllActiveGames()
+
+            val result = service.submitResignation(RESIGN_DTO)
+
+            result shouldBeEqualTo SubmitResignationResult.Error.GameNotActive
+        }
+
+        it("should return error when requesting player is not in the game") {
+            val service = createServiceForTesting()
+            service.createGame(
+                    CREATE_GAME_DTO.copy(
+                            playersIds = setOf(
+                                    UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"),
+                                    UUID.fromString("496bbf40-a106-49cc-9c4b-ab466b79d7de"),
+                                    UUID.fromString("d4fd97e0-7321-4e30-b72a-349d79bc9798"),
+                                    UUID.fromString("446cc4d9-ca17-4e6f-be8e-b32d3367f5a8")
+                            )
+                    )
+            )
+            service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+
+            val result = service.submitResignation(
+                    RESIGN_DTO.copy(requestingPlayerId = UUID.fromString("ef6f9394-4c3a-4e36-aa8d-145ab06d3b51"))
+            )
+
+            result shouldBeEqualTo SubmitResignationResult.Error.PlayerNotInTheGame
+        }
+
+        it("should return error when resignation is not allowed") {
+            val service = createServiceForTesting()
+            service.createGame(CREATE_GAME_DTO)
+            service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+
+            service.submitResignation(RESIGN_DTO)
+            val result = service.submitResignation(RESIGN_DTO)
+
+            result shouldBeEqualTo SubmitResignationResult.Error.NotAllowed
+        }
+
+        it("should return new game state on success") {
+            val service = createServiceForTesting()
+            service.createGame(CREATE_GAME_DTO)
+            service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+
+            val result = service.submitResignation(RESIGN_DTO)
+
+            result shouldBeEqualTo SubmitResignationResult.Success(
+                    GameStateDto(
+                            board = listOf(
+                                    listOf("rR", "rN", "rB", "rQ", "rK", "rB", "rN", "rR"),
+                                    listOf("rP", "rP", "rP", "rP", "rP", "rP", "rP", "rP"),
+                                    listOf("", "", "", "", "", "", "", ""),
+                                    listOf("bR", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gR"),
+                                    listOf("bN", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gN"),
+                                    listOf("bB", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gB"),
+                                    listOf("bQ", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gK"),
+                                    listOf("bK", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gQ"),
+                                    listOf("bB", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gB"),
+                                    listOf("bN", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gN"),
+                                    listOf("bR", "bP", "", "", "", "", "", "", "", "", "", "", "gP", "gR"),
+                                    listOf("", "", "", "", "", "", "", ""),
+                                    listOf("yP", "yP", "yP", "yP", "yP", "yP", "yP", "yP"),
+                                    listOf("yR", "yN", "yB", "yK", "yQ", "yB", "yN", "yR")
+                            ),
+                            eliminatedColors = listOf("red"),
+                            nextMoveColor = "blue",
+                            colorsInCheck = emptyList(),
+                            legalMoves = listOf(
+                                    LegalMoveDto("a5", "c6"),
+                                    LegalMoveDto("a5", "c4"),
+                                    LegalMoveDto("a10", "c11"),
+                                    LegalMoveDto("a10", "c9"),
+                                    LegalMoveDto("b4", "c4"),
+                                    LegalMoveDto("b4", "d4"),
+                                    LegalMoveDto("b5", "c5"),
+                                    LegalMoveDto("b5", "d5"),
+                                    LegalMoveDto("b6", "c6"),
+                                    LegalMoveDto("b6", "d6"),
+                                    LegalMoveDto("b7", "c7"),
+                                    LegalMoveDto("b7", "d7"),
+                                    LegalMoveDto("b8", "c8"),
+                                    LegalMoveDto("b8", "d8"),
+                                    LegalMoveDto("b9", "c9"),
+                                    LegalMoveDto("b9", "d9"),
+                                    LegalMoveDto("b10", "c10"),
+                                    LegalMoveDto("b10", "d10"),
+                                    LegalMoveDto("b11", "c11"),
+                                    LegalMoveDto("b11", "d11")
+                            ),
+                            isFinished = false,
+                            winningColor = null
+                    ),
+                    resignedColor = "red"
             )
         }
     }

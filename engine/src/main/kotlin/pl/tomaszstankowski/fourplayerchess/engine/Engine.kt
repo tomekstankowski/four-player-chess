@@ -45,6 +45,20 @@ class Engine(state: State) {
         this.legalMoves = legalMoves
     }
 
+    fun submitResignation(color: Color): Boolean {
+        if (isGameOver || state.eliminatedColors.contains(color)) {
+            return false
+        }
+        val (newState, newStateFeatures, newLegalMoves) = makeResignation(color, state)
+        state = newState
+        stateFeatures = newStateFeatures
+        legalMoves = newLegalMoves
+
+        updateTranspositionTable()
+
+        return true
+    }
+
     fun claimDraw(): Boolean {
         if (isDrawByClaimAllowed) {
             isDrawByClaim = true
@@ -67,12 +81,7 @@ class Engine(state: State) {
             stateFeatures = newStateFeatures
             legalMoves = newLegalMoves
 
-            val key = state.transpositionTableKey
-            val data = transpositionTable.getOrPut(key) { TranspositionTableData() }
-            data.positionOccurrenceCount++
-            if (data.positionOccurrenceCount == 3) {
-                isThreeFoldRepetition = true
-            }
+            updateTranspositionTable()
 
             if (newState.plyCount.count >= 50) {
                 isFiftyMoveRule = true
@@ -81,6 +90,15 @@ class Engine(state: State) {
             return true
         }
         return false
+    }
+
+    private fun updateTranspositionTable() {
+        val key = state.transpositionTableKey
+        val data = transpositionTable.getOrPut(key) { TranspositionTableData() }
+        data.positionOccurrenceCount++
+        if (data.positionOccurrenceCount == 3) {
+            isThreeFoldRepetition = true
+        }
     }
 
     private val State.transpositionTableKey: Int

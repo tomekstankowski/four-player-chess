@@ -26,6 +26,24 @@ sealed class MakeMoveResult {
     }
 }
 
+sealed class SubmitResignationResult {
+    data class Success(val newGameState: GameStateDto, val resignedColor: String) : SubmitResignationResult()
+    sealed class Error : SubmitResignationResult() {
+        data class GameNotFound(val id: UUID) : Error()
+        object GameNotActive : Error()
+        object PlayerNotInTheGame : Error()
+        object NotAllowed : Error()
+
+        val message: String
+            get() = when (this) {
+                is GameNotFound -> "Game with id $id not found"
+                GameNotActive -> "Game is not active"
+                PlayerNotInTheGame -> "Requesting player is not in the game"
+                NotAllowed -> "Resignation is not allowed in current game state"
+            }
+    }
+}
+
 sealed class GetGameStateResult {
     data class Success(val gameState: GameStateDto) : GetGameStateResult()
     data class GameNotFound(val id: UUID) : GetGameStateResult()

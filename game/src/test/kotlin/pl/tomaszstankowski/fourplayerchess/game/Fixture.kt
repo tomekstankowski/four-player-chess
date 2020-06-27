@@ -20,4 +20,9 @@ object Fixture {
             to = "d3",
             promotionPiece = null
     )
+
+    val RESIGN_DTO = SubmitResignationDto(
+            gameId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
+            requestingPlayerId = UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c")
+    )
 }

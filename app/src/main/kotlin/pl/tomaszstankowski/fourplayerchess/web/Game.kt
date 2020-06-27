@@ -58,6 +58,24 @@ class GameController(private val gameControlService: GameControlService) {
             )
         }
     }
+
+    @MessageMapping("/games/{gameId}/resign")
+    fun resign(@DestinationVariable gameId: UUID, principal: Principal): ResignResponse {
+        val dto = SubmitResignationDto(
+                gameId = gameId,
+                requestingPlayerId = UUID.fromString(principal.name)
+        )
+        return when (val result = gameControlService.submitResignation(dto)) {
+            is SubmitResignationResult.Success -> ResignResponse(
+                    payload = ResignResponsePayload(result.newGameState, result.resignedColor),
+                    error = null
+            )
+            is SubmitResignationResult.Error -> ResignResponse(
+                    payload = null,
+                    error = result.message
+            )
+        }
+    }
 }
 
 data class MakeMoveMessage(val from: String, val to: String, val promotionPiece: String?)
@@ -67,3 +85,8 @@ data class MakeMoveResponse(val payload: MakeMoveResponsePayload?,
 
 data class MakeMoveResponsePayload(val newGameState: GameStateDto,
                                    val move: LegalMoveDto)
+
+data class ResignResponse(val payload: ResignResponsePayload?,
+                          val error: String?)
+
+data class ResignResponsePayload(val newGameState: GameStateDto, val resigningColor: String)
