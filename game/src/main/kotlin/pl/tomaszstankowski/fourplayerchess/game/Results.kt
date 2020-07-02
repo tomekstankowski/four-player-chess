@@ -44,6 +44,24 @@ sealed class SubmitResignationResult {
     }
 }
 
+sealed class ClaimDrawResult {
+    data class Success(val newGameState: GameStateDto, val claimingColor: String) : ClaimDrawResult()
+    sealed class Error : ClaimDrawResult() {
+        data class GameNotFound(val id: UUID) : Error()
+        object GameNotActive : Error()
+        object PlayerNotInTheGame : Error()
+        object NotAllowed : Error()
+
+        val message: String
+            get() = when (this) {
+                is GameNotFound -> "Game with id $id not found"
+                GameNotActive -> "Game is not active"
+                PlayerNotInTheGame -> "Requesting player is not in the game"
+                NotAllowed -> "Draw by claim is not allowed in current game state"
+            }
+    }
+}
+
 sealed class GetGameStateResult {
     data class Success(val gameState: GameStateDto) : GetGameStateResult()
     data class GameNotFound(val id: UUID) : GetGameStateResult()

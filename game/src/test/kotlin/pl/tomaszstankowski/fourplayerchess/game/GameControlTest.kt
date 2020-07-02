@@ -4,6 +4,7 @@ import org.amshove.kluent.mock
 import org.amshove.kluent.shouldBeEqualTo
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.specification.describe
+import pl.tomaszstankowski.fourplayerchess.game.Fixture.CLAIM_DRAW_DTO
 import pl.tomaszstankowski.fourplayerchess.game.Fixture.CREATE_GAME_DTO
 import pl.tomaszstankowski.fourplayerchess.game.Fixture.MAKE_MOVE_DTO
 import pl.tomaszstankowski.fourplayerchess.game.Fixture.NOW
@@ -300,6 +301,7 @@ class GameControlTest : Spek({
                                     LegalMoveDto("k2", "k3"),
                                     LegalMoveDto("k2", "k4")
                             ),
+                            isDrawByClaimAllowed = false,
                             isFinished = false,
                             winningColor = null
                     )
@@ -503,6 +505,7 @@ class GameControlTest : Spek({
                                     LegalMoveDto("b11", "c11"),
                                     LegalMoveDto("b11", "d11")
                             ),
+                            isDrawByClaimAllowed = false,
                             isFinished = false,
                             winningColor = null
                     )
@@ -619,6 +622,7 @@ class GameControlTest : Spek({
                                     LegalMoveDto("b11", "c11"),
                                     LegalMoveDto("b11", "d11")
                             ),
+                            isDrawByClaimAllowed = false,
                             isFinished = false,
                             winningColor = null
                     ),
@@ -653,6 +657,64 @@ class GameControlTest : Spek({
 
             service.getGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))?.isCancelled shouldBeEqualTo true
             service.getGame(UUID.fromString("00000000-0000-0000-0000-000000000002"))?.isCancelled shouldBeEqualTo true
+        }
+    }
+
+    describe("claiming draw") {
+
+        it("should return error when game not found") {
+            val service = createServiceForTesting()
+
+            val result = service.claimDraw(
+                    CLAIM_DRAW_DTO.copy(gameId = UUID.fromString("6fb1505d-f00b-4d3a-92db-1c165d73a040"))
+            )
+
+            result shouldBeEqualTo ClaimDrawResult.Error.GameNotFound(
+                    id = UUID.fromString("6fb1505d-f00b-4d3a-92db-1c165d73a040")
+            )
+        }
+
+        it("should return error when game is not active") {
+            val service = createServiceForTesting()
+            service.createGame(CREATE_GAME_DTO)
+            service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+            service.cancelAllActiveGames()
+
+            val result = service.claimDraw(CLAIM_DRAW_DTO)
+
+            result shouldBeEqualTo ClaimDrawResult.Error.GameNotActive
+        }
+
+        it("should return error when requesting player is not in game") {
+            val service = createServiceForTesting()
+            service.createGame(
+                    CREATE_GAME_DTO.copy(
+                            playersIds = setOf(
+                                    UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"),
+                                    UUID.fromString("496bbf40-a106-49cc-9c4b-ab466b79d7de"),
+                                    UUID.fromString("d4fd97e0-7321-4e30-b72a-349d79bc9798"),
+                                    UUID.fromString("446cc4d9-ca17-4e6f-be8e-b32d3367f5a8")
+                            )
+                    )
+            )
+            service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+
+            val result = service.claimDraw(
+                    CLAIM_DRAW_DTO.copy(requestingPlayerId = UUID.fromString("41799370-f974-48c8-9a23-aa2423f26bb7"))
+            )
+
+            result shouldBeEqualTo ClaimDrawResult.Error.PlayerNotInTheGame
+        }
+
+        it("should return error when draw by claim is not allowed") {
+            val service = createServiceForTesting()
+            service.createGame(CREATE_GAME_DTO)
+            service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+
+            val result = service.claimDraw(CLAIM_DRAW_DTO)
+
+            result shouldBeEqualTo ClaimDrawResult.Error.NotAllowed
+
         }
     }
 })

@@ -76,6 +76,24 @@ class GameController(private val gameControlService: GameControlService) {
             )
         }
     }
+
+    @MessageMapping("/games/{gameId}/claim-draw")
+    fun claimDraw(@DestinationVariable gameId: UUID, principal: Principal): ClaimDrawResponse {
+        val dto = ClaimDrawDto(
+                gameId = gameId,
+                requestingPlayerId = UUID.fromString(principal.name)
+        )
+        return when (val result = gameControlService.claimDraw(dto)) {
+            is ClaimDrawResult.Success -> ClaimDrawResponse(
+                    payload = ClaimDrawPayload(result.newGameState, result.claimingColor),
+                    error = null
+            )
+            is ClaimDrawResult.Error -> ClaimDrawResponse(
+                    payload = null,
+                    error = result.message
+            )
+        }
+    }
 }
 
 data class MakeMoveMessage(val from: String, val to: String, val promotionPiece: String?)
@@ -90,3 +108,8 @@ data class ResignResponse(val payload: ResignResponsePayload?,
                           val error: String?)
 
 data class ResignResponsePayload(val newGameState: GameStateDto, val resigningColor: String)
+
+data class ClaimDrawResponse(val payload: ClaimDrawPayload?,
+                             val error: String?)
+
+data class ClaimDrawPayload(val newGameState: GameStateDto, val claimingColor: String)

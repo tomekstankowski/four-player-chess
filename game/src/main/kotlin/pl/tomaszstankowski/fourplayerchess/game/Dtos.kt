@@ -41,12 +41,16 @@ data class MakeMoveDto(val gameId: UUID,
 data class SubmitResignationDto(val gameId: UUID,
                                 val requestingPlayerId: UUID)
 
+data class ClaimDrawDto(val gameId: UUID,
+                        val requestingPlayerId: UUID)
+
 data class GameStateDto(
         val board: List<List<String>>,
         val eliminatedColors: List<String>,
         val nextMoveColor: String,
         val colorsInCheck: List<String>,
         val legalMoves: List<LegalMoveDto>,
+        val isDrawByClaimAllowed: Boolean,
         val isFinished: Boolean,
         val winningColor: String?
 ) {
@@ -55,6 +59,7 @@ data class GameStateDto(
         internal fun create(state: State,
                             stateFeatures: StateFeatures,
                             legalMoves: List<Move>,
+                            isDrawByClaimAllowed: Boolean,
                             isFinished: Boolean,
                             winningColor: Color?) =
                 GameStateDto(
@@ -68,6 +73,7 @@ data class GameStateDto(
                             else color.toJsonStr()
                         },
                         legalMoves = legalMoves.map { it.toDto() },
+                        isDrawByClaimAllowed = isDrawByClaimAllowed,
                         isFinished = isFinished,
                         winningColor = winningColor?.toJsonStr()
                 )

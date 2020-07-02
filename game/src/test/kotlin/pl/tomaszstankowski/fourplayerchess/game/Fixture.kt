@@ -25,4 +25,9 @@ object Fixture {
             gameId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
             requestingPlayerId = UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c")
     )
+
+    val CLAIM_DRAW_DTO = ClaimDrawDto(
+            gameId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
+            requestingPlayerId = UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c")
+    )
 }

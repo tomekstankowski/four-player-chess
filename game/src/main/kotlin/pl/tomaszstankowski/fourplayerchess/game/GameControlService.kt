@@ -199,13 +199,32 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
         }
         val engineInstance = getEngineInstance(gameId)
         if (engineInstance.isGameOver) {
-            val finishedGame = game.copy(isFinished = true)
-            gameRepository.update(finishedGame)
-            engineInstanceStore.remove(gameId)
+            handleGameFinished(game)
         }
         val newGameState = engineInstance.getGameStateDto()
-        gameMessageBroker.sendResignationSubmittedMessage(gameId, newGameState, requestingPlayerColor)
-        return SubmitResignationResult.Success(newGameState, requestingPlayerColor.toJsonStr())
+        gameMessageBroker.sendResignationSubmittedMessage(gameId, newGameState, resignedColor = requestingPlayerColor.toJsonStr())
+        return SubmitResignationResult.Success(newGameState, resignedColor = requestingPlayerColor.toJsonStr())
+    }
+
+    fun claimDraw(dto: ClaimDrawDto): ClaimDrawResult {
+        val gameId = dto.gameId
+        val game = getCommittedGame(gameId) ?: return ClaimDrawResult.Error.GameNotFound(gameId)
+        if (!game.isActive) {
+            return ClaimDrawResult.Error.GameNotActive
+        }
+        val players = gamePlayerRepository.findByGameId(gameId)
+        val requestingPlayerColor = players.firstOrNull { it.playerId == dto.requestingPlayerId }?.color
+                ?: return ClaimDrawResult.Error.PlayerNotInTheGame
+        val isDrawClaimed = engineInstanceStore.synchronized(gameId) { engine -> engine.claimDraw() }
+                ?: throw IllegalStateException()
+        if (!isDrawClaimed) {
+            return ClaimDrawResult.Error.NotAllowed
+        }
+        val engineInstance = getEngineInstance(gameId)
+        handleGameFinished(game)
+        val newGameState = engineInstance.getGameStateDto()
+        gameMessageBroker.sendDrawClaimedMessage(gameId, newGameState, claimingColor = requestingPlayerColor.toJsonStr())
+        return ClaimDrawResult.Success(newGameState, claimingColor = requestingPlayerColor.toJsonStr())
     }
 
     fun cancelAllActiveGames() {
@@ -228,9 +247,16 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
                     state = state,
                     stateFeatures = stateFeatures,
                     legalMoves = legalMoves,
+                    isDrawByClaimAllowed = isDrawByClaimAllowed,
                     isFinished = isGameOver,
                     winningColor = winningColor
             )
+
+    private fun handleGameFinished(game: Game) {
+        val finishedGame = game.copy(isFinished = true)
+        gameRepository.update(finishedGame)
+        engineInstanceStore.remove(game.id)
+    }
 
     private fun getEngineInstance(gameId: UUID) =
             engineInstanceStore.get(gameId) ?: throw IllegalStateException("No engine instance found for game $gameId")

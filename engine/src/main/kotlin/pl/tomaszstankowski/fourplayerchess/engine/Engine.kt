@@ -62,8 +62,9 @@ class Engine(state: State) {
     fun claimDraw(): Boolean {
         if (isDrawByClaimAllowed) {
             isDrawByClaim = true
+            return true
         }
-        return isDrawByClaim
+        return false
     }
 
     fun makeMove(moveClaim: MoveClaim): Boolean {
