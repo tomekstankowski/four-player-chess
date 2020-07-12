@@ -2,13 +2,21 @@ package pl.tomaszstankowski.fourplayerchess.game
 
 import java.util.*
 
+sealed class CreateGameResult {
+    data class Success(val game: GameDto) : CreateGameResult()
+    sealed class Error : CreateGameResult() {
+        data class NotEnoughPlayers(val playersCount: Int) : Error()
+        data class TooManyPlayers(val playersCount: Int) : Error()
+    }
+}
+
 sealed class MakeMoveResult {
     data class Success(val newGameState: GameStateDto) : MakeMoveResult()
     sealed class Error : MakeMoveResult() {
         data class GameNotFound(val id: UUID) : Error()
         object GameNotActive : Error()
         object PlayerIsNotInTheGame : Error()
-        data class NoPlayerTurn(val playerWithNextTurnId: UUID) : Error()
+        data class PlayerDoesNotHaveNextMove(val nextMoveColor: String, val playerColor: String) : Error()
         data class InvalidPosition(val position: String) : Error()
         data class IllegalPromotionPiece(val legalPieces: List<String>, val given: String) : Error()
         object IllegalMove : Error()
@@ -21,7 +29,7 @@ sealed class MakeMoveResult {
                 is IllegalPromotionPiece -> "Illegal promotion piece, expected one of ${legalPieces}, got: $given"
                 IllegalMove -> "Illegal move"
                 PlayerIsNotInTheGame -> "Requesting player is not in the game"
-                is NoPlayerTurn -> "It's not a turn of requesting player. Player with id '$playerWithNextTurnId' has next turn."
+                is PlayerDoesNotHaveNextMove -> "$nextMoveColor has next move, requesting player's color is $playerColor"
             }
     }
 }

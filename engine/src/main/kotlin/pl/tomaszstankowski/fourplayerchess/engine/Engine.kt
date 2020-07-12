@@ -1,8 +1,10 @@
 package pl.tomaszstankowski.fourplayerchess.engine
 
 import pl.tomaszstankowski.fourplayerchess.engine.MoveClaim.PromotionMoveClaim
+import pl.tomaszstankowski.fourplayerchess.engine.MoveClaim.RegularMoveClaim
+import kotlin.random.Random
 
-class Engine(state: State) {
+class Engine(state: State = State.starting(), private val random: Random = Random.Default) {
     var state: State
         private set
 
@@ -77,20 +79,33 @@ class Engine(state: State) {
                     && (!move.isPawnPromotion(state) || moveClaim is PromotionMoveClaim)
         }
         if (isValidMove) {
-            val (newState, newStateFeatures, newLegalMoves) = makeMove(moveClaim, state)
-            state = newState
-            stateFeatures = newStateFeatures
-            legalMoves = newLegalMoves
-
-            updateTranspositionTable()
-
-            if (newState.plyCount.count >= 50) {
-                isFiftyMoveRule = true
-            }
-
+            makeValidMove(moveClaim)
             return true
         }
         return false
+    }
+
+    fun makeRandomMove(): Move? {
+        if (isGameOver) {
+            return null
+        }
+        val move = legalMoves.random(random)
+        val moveClaim = if (move.isPawnPromotion(state)) PromotionMoveClaim(move, PieceType.Queen) else RegularMoveClaim(move)
+        makeValidMove(moveClaim)
+        return move
+    }
+
+    private fun makeValidMove(moveClaim: MoveClaim) {
+        val (newState, newStateFeatures, newLegalMoves) = makeMove(moveClaim, state)
+        state = newState
+        stateFeatures = newStateFeatures
+        legalMoves = newLegalMoves
+
+        updateTranspositionTable()
+
+        if (newState.plyCount.count >= 50) {
+            isFiftyMoveRule = true
+        }
     }
 
     private fun updateTranspositionTable() {

@@ -15,8 +15,6 @@ internal class EngineInstanceStore {
         gameToEngine.remove(gameId)
     }
 
-    fun get(gameId: UUID): Engine? = gameToEngine[gameId]
-
     inline fun <T> synchronized(gameId: UUID, crossinline func: (Engine) -> T): T? {
         var result: T? = null
         gameToEngine.computeIfPresent(gameId) { _, engine ->

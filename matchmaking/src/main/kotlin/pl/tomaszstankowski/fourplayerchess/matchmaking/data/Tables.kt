@@ -15,11 +15,21 @@ internal object LobbyTable {
 }
 
 internal object LobbyMembershipTable {
-    const val NAME = "lobby_membership"
+    const val NAME = "human_player_lobby_membership"
 
     object Columns {
         const val LOBBY_ID = "lobby_id"
-        const val PLAYER_ID = "player_id"
+        const val USER_ID = "user_id"
+        const val CREATED_AT = "created_at"
+    }
+}
+
+internal object RandomBotMembershipTable {
+    const val NAME = "random_bot_lobby_membership"
+
+    object Columns {
+        const val LOBBY_ID = "lobby_id"
+        const val BOT_ID = "bot_id"
         const val CREATED_AT = "created_at"
     }
 }

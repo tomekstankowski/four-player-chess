@@ -7,14 +7,12 @@ import org.springframework.context.annotation.Bean
 import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.transaction.PlatformTransactionManager
 import pl.tomaszstankowski.fourplayerchess.auth.AuthenticationService
-import pl.tomaszstankowski.fourplayerchess.game.CreateGameDto
 import pl.tomaszstankowski.fourplayerchess.game.GameControlService
-import pl.tomaszstankowski.fourplayerchess.matchmaking.CreateGameUseCase
+import pl.tomaszstankowski.fourplayerchess.infr.CreateGameUserCaseAdapter
 import pl.tomaszstankowski.fourplayerchess.matchmaking.LobbySearchService
 import pl.tomaszstankowski.fourplayerchess.matchmaking.MatchmakingService
 import java.time.Clock
 import java.time.temporal.ChronoUnit.HOURS
-import java.util.*
 import javax.sql.DataSource
 
 @SpringBootApplication
@@ -29,24 +27,11 @@ class FourPlayerChessApplication {
                            transactionManager: PlatformTransactionManager,
                            gameControlService: GameControlService,
                            simpMessagingTemplate: SimpMessagingTemplate): MatchmakingService {
-        val createGameUseCaseAdapter = object : CreateGameUseCase {
-
-            override fun createGame(playersIds: Set<UUID>): UUID {
-                val game = gameControlService.createGame(
-                        CreateGameDto(playersIds)
-                )
-                return game.id
-            }
-
-            override fun commitGame(gameId: UUID) {
-                gameControlService.commitGame(gameId)
-            }
-        }
         return MatchmakingService.create(
                 clock = clock,
                 dataSource = dataSource,
                 transactionManager = transactionManager,
-                createGameUseCase = createGameUseCaseAdapter,
+                createGameUseCase = CreateGameUserCaseAdapter(gameControlService),
                 simpMessageSendingOperations = simpMessagingTemplate
         )
     }

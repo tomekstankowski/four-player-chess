@@ -34,12 +34,16 @@ class GameControlTest : IntegrationTest() {
                     jsonPath("$", hasSize<Any>(4))
                     jsonPath("[0].playerId") { value("02d37d81-d1e1-4719-872a-ccab471ea908") }
                     jsonPath("[0].color") { value("red") }
+                    jsonPath("[0].type") { value("human") }
                     jsonPath("[1].playerId") { value("4f56f39c-2f52-4015-9353-49c7580458b3") }
                     jsonPath("[1].color") { value("blue") }
+                    jsonPath("[1].type") { value("human") }
                     jsonPath("[2].playerId") { value("2f0bc4e1-5b36-47f7-a0b3-49bf9109696d") }
                     jsonPath("[2].color") { value("yellow") }
-                    jsonPath("[3].playerId") { value("7db8e058-6101-4a34-a92d-871f6444acac") }
+                    jsonPath("[2].type") { value("human") }
+                    jsonPath("[3].playerId") { isEmpty }
                     jsonPath("[3].color") { value("green") }
+                    jsonPath("[3].type") { value("randomBot") }
                 }
     }
 

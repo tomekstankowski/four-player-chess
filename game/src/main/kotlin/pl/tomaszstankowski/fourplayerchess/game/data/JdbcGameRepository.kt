@@ -64,10 +64,10 @@ internal class JdbcGameRepository(dataSource: DataSource) : GameRepository {
         return rows.firstOrNull()
     }
 
-    override fun findByPlayerId(playerId: UUID): List<Game> {
+    override fun findByHumanPlayerUserId(playerId: UUID): List<Game> {
         val sql = "SELECT * FROM ${GameTable.NAME} g " +
-                "LEFT JOIN ${GamePlayerTable.NAME} p ON p.${GamePlayerTable.Columns.GAME_ID} = g.$ID " +
-                "WHERE p.${GamePlayerTable.Columns.PLAYER_ID} = ?"
+                "LEFT JOIN ${HumanPlayerTable.NAME} p ON p.${HumanPlayerTable.Columns.GAME_ID} = g.$ID " +
+                "WHERE p.${HumanPlayerTable.Columns.USER_ID} = ?"
         return template.query(sql, rowMapper, playerId)
     }
 

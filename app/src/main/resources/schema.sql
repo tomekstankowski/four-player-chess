@@ -7,12 +7,19 @@ CREATE TABLE IF NOT EXISTS game
     finished   BOOL
 );
 
-CREATE TABLE IF NOT EXISTS game_player
+CREATE TABLE IF NOT EXISTS human_game_player
 (
-    game_id   UUID NOT NULL REFERENCES game (id),
-    player_id UUID NOT NULL,
-    color     VARCHAR(255),
-    PRIMARY KEY (game_id, player_id)
+    game_id UUID NOT NULL REFERENCES game (id),
+    user_id UUID NOT NULL,
+    color   VARCHAR(255),
+    PRIMARY KEY (game_id, color)
+);
+
+CREATE TABLE IF NOT EXISTS random_bot_game_player
+(
+    game_id UUID NOT NULL REFERENCES game (id),
+    color   VARCHAR(255),
+    PRIMARY KEY (game_id, color)
 );
 
 CREATE TABLE IF NOT EXISTS lobby
@@ -26,10 +33,18 @@ CREATE TABLE IF NOT EXISTS lobby
     version    INT DEFAULT 1
 );
 
-CREATE TABLE IF NOT EXISTS lobby_membership
+CREATE TABLE IF NOT EXISTS human_player_lobby_membership
 (
     lobby_id   UUID NOT NULL REFERENCES lobby (id),
-    player_id  UUID NOT NULL,
+    user_id    UUID NOT NULL,
     created_at TIMESTAMP,
-    PRIMARY KEY (lobby_id, player_id)
+    PRIMARY KEY (lobby_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS random_bot_lobby_membership
+(
+    bot_id     UUID NOT NULL,
+    lobby_id   UUID NOT NULL REFERENCES lobby (id),
+    created_at TIMESTAMP,
+    PRIMARY KEY (lobby_id, bot_id)
 );

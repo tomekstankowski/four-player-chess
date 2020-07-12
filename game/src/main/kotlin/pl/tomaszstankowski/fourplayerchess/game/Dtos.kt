@@ -6,7 +6,7 @@ import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
 import java.time.Instant
 import java.util.*
 
-data class CreateGameDto(val playersIds: Set<UUID>)
+data class CreateGameDto(val humanPlayersIds: Set<UUID>, val randomBotsCount: Int)
 
 data class GameDto(val id: UUID,
                    val createdAt: Instant,
@@ -22,13 +22,18 @@ internal fun Game.toDto() =
         )
 
 data class GamePlayerDto(
-        val playerId: UUID,
+        val playerId: UUID?,
+        val type: String,
         val color: String
 )
 
-internal fun GamePlayer.toDto() =
+internal fun Player.toDto() =
         GamePlayerDto(
-                playerId = playerId,
+                playerId = (this as? Player.HumanPlayer)?.userId,
+                type = when (this) {
+                    is Player.HumanPlayer -> "human"
+                    is Player.RandomBot -> "randomBot"
+                },
                 color = color.toJsonStr()
         )
 
@@ -127,3 +132,12 @@ internal fun String.toPieceTypeOrNull(): PieceType? =
             null
         }
 
+internal fun EngineStateSnapshot.toGameStateDto() =
+        GameStateDto.create(
+                state = state,
+                stateFeatures = stateFeatures,
+                legalMoves = legalMoves,
+                isDrawByClaimAllowed = isDrawByClaimAllowed,
+                isFinished = isGameOver,
+                winningColor = winningColor
+        )

@@ -5,9 +5,8 @@ import java.util.*
 
 internal class LobbyMessageBroker(private val simpMessagingOps: SimpMessageSendingOperations) {
 
-    fun sendPlayerJoinedLobbyMessage(playerId: UUID, lobbyId: UUID) {
-        val payload = PlayerJoinedLobbyPayload(playerId)
-        simpMessagingOps.convertAndSend("/topic/lobbies/$lobbyId/joining-players", payload)
+    fun sendPlayerJoinedLobbyMessage(lobbyId: UUID, membership: LobbyMembershipDto) {
+        simpMessagingOps.convertAndSend("/topic/lobbies/$lobbyId/joining-players", membership)
     }
 
     fun sendPlayerLeftLobbyMessage(playerId: UUID, lobbyId: UUID) {
@@ -25,11 +24,20 @@ internal class LobbyMessageBroker(private val simpMessagingOps: SimpMessageSendi
         simpMessagingOps.convertAndSend("/topic/lobbies/$lobbyId/game-started", payload)
     }
 
-    internal data class PlayerJoinedLobbyPayload(val playerId: UUID)
+    fun sendRandomBotAddedToLobbyMessage(lobbyId: UUID, membership: LobbyMembershipDto) {
+        simpMessagingOps.convertAndSend("/topic/lobbies/$lobbyId/added-bots", membership)
+    }
+
+    fun sendRandomBotRemovedFromLobby(lobbyId: UUID, botId: UUID) {
+        val payload = RandomBotRemovedFromLobbyPayload(botId)
+        simpMessagingOps.convertAndSend("/topic/lobbies/$lobbyId/removed-bots", payload)
+    }
 
     internal data class PlayerLeftLobbyPayload(val playerId: UUID)
 
     internal class LobbyDeletedPayload
 
     internal data class GameStartedPayload(val gameId: UUID)
+
+    internal data class RandomBotRemovedFromLobbyPayload(val botId: UUID)
 }

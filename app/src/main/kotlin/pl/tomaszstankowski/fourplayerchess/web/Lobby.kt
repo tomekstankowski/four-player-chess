@@ -94,6 +94,44 @@ class LobbyController(private val matchmakingService: MatchmakingService,
         }
     }
 
+    @PostMapping("/{id}/random-bots")
+    @ResponseStatus(CREATED)
+    fun addRandomBot(@PathVariable id: UUID): LobbyMembershipDto {
+        val dto = AddRandomBotDto(
+                lobbyId = id,
+                requestingPlayerId = getAuthenticatedUserId()
+        )
+        return when (val result = matchmakingService.addRandomBot(dto)) {
+            is AddRandomBotResult.Success ->
+                result.membership
+            is AddRandomBotResult.LobbyNotFound ->
+                throw lobbyNotFoundException(id)
+            is AddRandomBotResult.LobbyIsFull ->
+                throw ApiException.unprocessableEntity("Lobby is full")
+            is AddRandomBotResult.RequestingPlayerNotAnOwner ->
+                throw ownershipOfTheLobbyRequiredException()
+        }
+    }
+
+    @DeleteMapping("/{lobbyId}/random-bots/{botId}")
+    @ResponseStatus(NO_CONTENT)
+    fun deleteRandomBot(@PathVariable lobbyId: UUID, @PathVariable botId: UUID): Unit {
+        val dto = RemoveRandomBotDto(
+                lobbyId = lobbyId,
+                requestingPlayerId = getAuthenticatedUserId(),
+                botId = botId
+        )
+        return when (val result = matchmakingService.removeRandomBot(dto)) {
+            RemoveRandomBotResult.Removed -> Unit
+            is RemoveRandomBotResult.LobbyNotFound ->
+                throw lobbyNotFoundException(lobbyId)
+            is RemoveRandomBotResult.BotNotFound ->
+                throw ApiException.unprocessableEntity("Bot with id ${result.botId} not found in lobby")
+            RemoveRandomBotResult.RequestingPlayerNotAnOwner ->
+                throw ownershipOfTheLobbyRequiredException()
+        }
+    }
+
     @GetMapping("/{id}/players")
     fun getPlayersInLobby(@PathVariable id: UUID): List<LobbyMembershipDto> =
             matchmakingService.getPlayersInLobby(id) ?: throw lobbyNotFoundException(id)
@@ -123,14 +161,6 @@ class LobbyController(private val matchmakingService: MatchmakingService,
     }
 
     private fun lobbyNotFoundException(id: UUID) = ApiException.resourceNotFound("lobby", id)
-
-    private fun nameConflictException(name: String) =
-            ApiException.unprocessableEntity(
-                    message = "Lobby with name $name already exists",
-                    data = mapOf(
-                            "cause" to "NAME_CONFLICT"
-                    )
-            )
 
     private fun ownershipOfTheLobbyRequiredException() =
             ApiException.forbidden("Requesting player is not an owner of the lobby")

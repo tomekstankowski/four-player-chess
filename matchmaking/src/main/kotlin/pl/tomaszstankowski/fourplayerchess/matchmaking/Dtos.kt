@@ -1,5 +1,7 @@
 package pl.tomaszstankowski.fourplayerchess.matchmaking
 
+import pl.tomaszstankowski.fourplayerchess.matchmaking.LobbyMembership.HumanPlayerMembership
+import pl.tomaszstankowski.fourplayerchess.matchmaking.LobbyMembership.RandomBotMembership
 import java.time.Instant
 import java.util.*
 
@@ -35,7 +37,17 @@ data class JoinLobbyDto(val lobbyId: UUID,
 data class LeaveLobbyDto(val lobbyId: UUID,
                          val requestingPlayerId: UUID)
 
-data class LobbyMembershipDto(val playerId: UUID, val joinedAt: Instant)
+data class AddRandomBotDto(val lobbyId: UUID,
+                           val requestingPlayerId: UUID)
+
+data class RemoveRandomBotDto(val lobbyId: UUID,
+                              val requestingPlayerId: UUID,
+                              val botId: UUID)
+
+data class LobbyMembershipDto(val type: String,
+                              val joinedAt: Instant,
+                              val userId: UUID?,
+                              val botId: UUID?)
 
 data class StartGameDto(val lobbyId: UUID,
                         val requestingPlayerId: UUID)
@@ -43,6 +55,11 @@ data class StartGameDto(val lobbyId: UUID,
 data class GameDto(val id: UUID)
 
 internal fun LobbyMembership.toDto() = LobbyMembershipDto(
-        playerId = playerId,
+        type = when (this) {
+            is HumanPlayerMembership -> "human"
+            is RandomBotMembership -> "randomBot"
+        },
+        userId = (this as? HumanPlayerMembership)?.userId,
+        botId = (this as? RandomBotMembership)?.botId,
         joinedAt = joinedAt
 )

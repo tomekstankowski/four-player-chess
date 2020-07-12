@@ -105,14 +105,14 @@ class MatchmakingTest : IntegrationTest() {
         mockMvc.post("/lobbies/{id}/join", FirstLobby.ID)
                 .andExpect {
                     status { isCreated }
-                    jsonPath("playerId") { value("abda40e1-3d1e-41ba-b272-58d4fcc91403") }
+                    jsonPath("userId") { value("abda40e1-3d1e-41ba-b272-58d4fcc91403") }
                     jsonPath("joinedAt") { isString }
                 }
 
         mockMvc.get("/lobbies/{id}/players", FirstLobby.ID)
                 .andExpect {
                     status { isOk }
-                    jsonPath("$", hasSize<Any>(3))
+                    jsonPath("$", hasSize<Any>(4))
                 }
     }
 
@@ -127,7 +127,40 @@ class MatchmakingTest : IntegrationTest() {
         mockMvc.get("/lobbies/{id}/players", FirstLobby.ID)
                 .andExpect {
                     status { isOk }
-                    jsonPath("$", hasSize<Any>(1))
+                    jsonPath("$", hasSize<Any>(2))
+                }
+    }
+
+    @Test
+    @WithMockUser(username = "df1a63de-c6b9-4383-ab56-761e3339be6c")
+    fun `can add random bot to lobby`() {
+        mockMvc.post("/lobbies/{id}/random-bots", FirstLobby.ID)
+                .andExpect {
+                    status { isCreated }
+                    jsonPath("type") { value("randomBot") }
+                    jsonPath("botId") { isString }
+                    jsonPath("joinedAt") { isString }
+                }
+
+        mockMvc.get("/lobbies/{id}/players", FirstLobby.ID)
+                .andExpect {
+                    status { isOk }
+                    jsonPath("$", hasSize<Any>(4))
+                }
+    }
+
+    @Test
+    @WithMockUser(username = "df1a63de-c6b9-4383-ab56-761e3339be6c")
+    fun `can remove random bot from lobby`() {
+        mockMvc.delete("/lobbies/{lobbyId}/random-bots/{botId}", FirstLobby.ID, "50939121-87a9-4247-8322-07d0c72d00c9")
+                .andExpect {
+                    status { isNoContent }
+                }
+
+        mockMvc.get("/lobbies/{id}/players", FirstLobby.ID)
+                .andExpect {
+                    status { isOk }
+                    jsonPath("$", hasSize<Any>(2))
                 }
     }
 
@@ -137,11 +170,16 @@ class MatchmakingTest : IntegrationTest() {
         mockMvc.get("/lobbies/{id}/players", FirstLobby.ID)
                 .andExpect {
                     status { isOk }
-                    jsonPath("$", hasSize<Any>(2))
-                    jsonPath("[0].playerId") { value("ff698d5e-d1a7-45d4-9e12-18d88bdf517e") }
-                    jsonPath("[0].joinedAt") { value("2020-01-31T22:08:15Z") }
-                    jsonPath("[1].playerId") { value("df1a63de-c6b9-4383-ab56-761e3339be6c") }
-                    jsonPath("[1].joinedAt") { value("2020-01-31T22:08:12Z") }
+                    jsonPath("$", hasSize<Any>(3))
+                    jsonPath("[0].userId") { value("df1a63de-c6b9-4383-ab56-761e3339be6c") }
+                    jsonPath("[0].joinedAt") { value("2020-01-31T22:08:12Z") }
+                    jsonPath("[0].type") { value("human") }
+                    jsonPath("[1].userId") { value("ff698d5e-d1a7-45d4-9e12-18d88bdf517e") }
+                    jsonPath("[1].joinedAt") { value("2020-01-31T22:08:15Z") }
+                    jsonPath("[1].type") { value("human") }
+                    jsonPath("[2].botId") { value("50939121-87a9-4247-8322-07d0c72d00c9") }
+                    jsonPath("[2].joinedAt") { value("2020-01-31T22:08:16Z") }
+                    jsonPath("[2].type") { value("randomBot") }
                 }
     }
 

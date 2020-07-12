@@ -6,54 +6,47 @@ import org.springframework.jdbc.core.simple.SimpleJdbcInsert
 import pl.tomaszstankowski.fourplayerchess.data.getInstantAtUTC
 import pl.tomaszstankowski.fourplayerchess.data.getUUID
 import pl.tomaszstankowski.fourplayerchess.data.toLocalDateTimeAtUTC
-import pl.tomaszstankowski.fourplayerchess.matchmaking.LobbyMembership
-import pl.tomaszstankowski.fourplayerchess.matchmaking.LobbyMembershipRepository
+import pl.tomaszstankowski.fourplayerchess.matchmaking.HumanPlayerMembershipRepository
+import pl.tomaszstankowski.fourplayerchess.matchmaking.LobbyMembership.HumanPlayerMembership
 import pl.tomaszstankowski.fourplayerchess.matchmaking.data.LobbyMembershipTable.Columns.CREATED_AT
 import pl.tomaszstankowski.fourplayerchess.matchmaking.data.LobbyMembershipTable.Columns.LOBBY_ID
-import pl.tomaszstankowski.fourplayerchess.matchmaking.data.LobbyMembershipTable.Columns.PLAYER_ID
+import pl.tomaszstankowski.fourplayerchess.matchmaking.data.LobbyMembershipTable.Columns.USER_ID
 import java.sql.ResultSet
 import java.util.*
 import javax.sql.DataSource
 
-internal class JdbcLobbyMembershipRepository(dataSource: DataSource) : LobbyMembershipRepository {
+internal class JdbcHumanPlayerMembershipRepository(dataSource: DataSource) : HumanPlayerMembershipRepository {
     private val jdbcTemplate = NamedParameterJdbcTemplate(dataSource)
     private val jdbcInsert = SimpleJdbcInsert(dataSource)
             .withTableName(LobbyMembershipTable.NAME)
 
-    override fun insert(lobbyMembership: LobbyMembership) {
+    override fun insert(membership: HumanPlayerMembership) {
         jdbcInsert.execute(
                 MapSqlParameterSource()
-                        .addValue(LOBBY_ID, lobbyMembership.lobbyId)
-                        .addValue(PLAYER_ID, lobbyMembership.playerId)
-                        .addValue(CREATED_AT, lobbyMembership.joinedAt.toLocalDateTimeAtUTC())
+                        .addValue(LOBBY_ID, membership.lobbyId)
+                        .addValue(USER_ID, membership.userId)
+                        .addValue(CREATED_AT, membership.joinedAt.toLocalDateTimeAtUTC())
         )
     }
 
-    override fun findByLobbyIdOrderByCreatedAtDesc(lobbyId: UUID): List<LobbyMembership> {
+    override fun findByLobbyId(lobbyId: UUID): List<HumanPlayerMembership> {
         val sql = "SELECT * FROM ${LobbyMembershipTable.NAME} WHERE $LOBBY_ID = :lobbyId ORDER BY $CREATED_AT DESC"
         val params = MapSqlParameterSource("lobbyId", lobbyId)
         return jdbcTemplate.query(sql, params, this::mapRow)
     }
 
     override fun deleteByLobbyIdAndPlayerId(lobbyId: UUID, playerId: UUID) {
-        val sql = "DELETE FROM ${LobbyMembershipTable.NAME} WHERE $LOBBY_ID = :lobbyId AND $PLAYER_ID = :playerId"
+        val sql = "DELETE FROM ${LobbyMembershipTable.NAME} WHERE $LOBBY_ID = :lobbyId AND $USER_ID = :playerId"
         val params = MapSqlParameterSource()
                 .addValue("lobbyId", lobbyId)
                 .addValue("playerId", playerId)
         jdbcTemplate.update(sql, params)
     }
 
-    override fun deleteByLobbyId(lobbyId: UUID) {
-        val sql = "DELETE FROM ${LobbyMembershipTable.NAME} WHERE $LOBBY_ID = :lobbyId"
-        val params = MapSqlParameterSource()
-                .addValue("lobbyId", lobbyId)
-        jdbcTemplate.update(sql, params)
-    }
-
-    private fun mapRow(rs: ResultSet, rowNum: Int): LobbyMembership =
-            LobbyMembership(
+    private fun mapRow(rs: ResultSet, rowNum: Int): HumanPlayerMembership =
+            HumanPlayerMembership(
                     lobbyId = rs.getUUID(LOBBY_ID),
-                    playerId = rs.getUUID(PLAYER_ID),
+                    userId = rs.getUUID(USER_ID),
                     joinedAt = rs.getInstantAtUTC(CREATED_AT)
             )
 }

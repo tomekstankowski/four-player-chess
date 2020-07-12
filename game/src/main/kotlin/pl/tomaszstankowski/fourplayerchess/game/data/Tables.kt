@@ -12,12 +12,21 @@ internal object GameTable {
     }
 }
 
-internal object GamePlayerTable {
-    const val NAME = "game_player"
+internal object HumanPlayerTable {
+    const val NAME = "human_game_player"
 
     object Columns {
         const val GAME_ID = "game_id"
-        const val PLAYER_ID = "player_id"
+        const val USER_ID = "user_id"
+        const val COLOR = "color"
+    }
+}
+
+internal object RandomBotTable {
+    const val NAME = "random_bot_game_player"
+
+    object Columns {
+        const val GAME_ID = "game_id"
         const val COLOR = "color"
     }
 }

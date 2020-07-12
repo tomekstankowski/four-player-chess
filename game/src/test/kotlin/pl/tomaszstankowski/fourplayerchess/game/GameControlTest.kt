@@ -1,6 +1,7 @@
 package pl.tomaszstankowski.fourplayerchess.game
 
 import org.amshove.kluent.mock
+import org.amshove.kluent.should
 import org.amshove.kluent.shouldBeEqualTo
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.specification.describe
@@ -18,24 +19,57 @@ import kotlin.random.Random
 
 class GameControlTest : Spek({
 
-    fun createServiceForTesting() =
+    fun createServiceForTesting(random: Random = Random(RANDOM_SEED)) =
             GameControlService.create(
                     clock = Clock.fixed(Instant.parse(NOW), ZoneId.of("UTC")),
-                    random = Random(RANDOM_SEED),
+                    random = random,
                     messageSendingOperations = mock()
             )
 
     describe("creating game") {
 
+        it("should return error when too many players given") {
+            val service = createServiceForTesting()
+
+            val result = service.createGame(
+                    CreateGameDto(
+                            humanPlayersIds = setOf(
+                                    UUID.fromString("925a168e-c60c-40db-bd51-ae62e40c9625")
+                            ),
+                            randomBotsCount = 4
+                    )
+            )
+
+            result shouldBeEqualTo CreateGameResult.Error.TooManyPlayers(playersCount = 5)
+        }
+
+        it("should return error when not enough players given") {
+            val service = createServiceForTesting()
+
+            val result = service.createGame(
+                    CreateGameDto(
+                            humanPlayersIds = setOf(
+                                    UUID.fromString("925a168e-c60c-40db-bd51-ae62e40c9625")
+                            ),
+                            randomBotsCount = 2
+                    )
+            )
+
+            result shouldBeEqualTo CreateGameResult.Error.NotEnoughPlayers(playersCount = 3)
+        }
+
         it("should return game") {
             val service = createServiceForTesting()
-            val game = service.createGame(CREATE_GAME_DTO)
 
-            game shouldBeEqualTo GameDto(
-                    id = UUID.fromString("00000000-0000-0000-0000-000000000001"),
-                    createdAt = Instant.parse(NOW),
-                    isCancelled = false,
-                    isFinished = false
+            val result = service.createGame(CREATE_GAME_DTO)
+
+            result shouldBeEqualTo CreateGameResult.Success(
+                    GameDto(
+                            id = UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                            createdAt = Instant.parse(NOW),
+                            isCancelled = false,
+                            isFinished = false
+                    )
             )
         }
 
@@ -65,12 +99,12 @@ class GameControlTest : Spek({
             val service = createServiceForTesting()
             service.createGame(
                     CREATE_GAME_DTO.copy(
-                            playersIds = setOf(
+                            humanPlayersIds = setOf(
                                     UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"),
                                     UUID.fromString("496bbf40-a106-49cc-9c4b-ab466b79d7de"),
-                                    UUID.fromString("d4fd97e0-7321-4e30-b72a-349d79bc9798"),
-                                    UUID.fromString("446cc4d9-ca17-4e6f-be8e-b32d3367f5a8")
-                            )
+                                    UUID.fromString("d4fd97e0-7321-4e30-b72a-349d79bc9798")
+                            ),
+                            randomBotsCount = 1
                     )
             )
             service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
@@ -78,10 +112,10 @@ class GameControlTest : Spek({
             val players = service.getPlayersOfTheGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
 
             players shouldBeEqualTo listOf(
-                    GamePlayerDto(playerId = UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"), color = "red"),
-                    GamePlayerDto(playerId = UUID.fromString("496bbf40-a106-49cc-9c4b-ab466b79d7de"), color = "blue"),
-                    GamePlayerDto(playerId = UUID.fromString("446cc4d9-ca17-4e6f-be8e-b32d3367f5a8"), color = "yellow"),
-                    GamePlayerDto(playerId = UUID.fromString("d4fd97e0-7321-4e30-b72a-349d79bc9798"), color = "green")
+                    GamePlayerDto(playerId = UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"), color = "red", type = "human"),
+                    GamePlayerDto(playerId = UUID.fromString("496bbf40-a106-49cc-9c4b-ab466b79d7de"), color = "blue", type = "human"),
+                    GamePlayerDto(playerId = null, color = "yellow", type = "randomBot"),
+                    GamePlayerDto(playerId = UUID.fromString("d4fd97e0-7321-4e30-b72a-349d79bc9798"), color = "green", type = "human")
             )
         }
 
@@ -126,6 +160,26 @@ class GameControlTest : Spek({
 
             result shouldBeEqualTo false
         }
+
+        it("should play bot move if bot opens game") {
+            // human player should play as blue
+            val service = createServiceForTesting(random = Random(8))
+            service.createGame(
+                    CreateGameDto(
+                            humanPlayersIds = setOf(
+                                    UUID.fromString("2fb0441c-1b7d-4c4e-b55f-688553358458")
+                            ),
+                            randomBotsCount = 3
+                    )
+            )
+
+            service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+            val state = service.getGameState(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+
+            state should {
+                this is GetGameStateResult.Success && this.gameState.nextMoveColor == "blue"
+            }
+        }
     }
 
     describe("getting active games for player") {
@@ -134,7 +188,7 @@ class GameControlTest : Spek({
             val service = createServiceForTesting()
             service.createGame(
                     CREATE_GAME_DTO.copy(
-                            playersIds = setOf(
+                            humanPlayersIds = setOf(
                                     UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"),
                                     UUID.fromString("496bbf40-a106-49cc-9c4b-ab466b79d7de"),
                                     UUID.fromString("d4fd97e0-7321-4e30-b72a-349d79bc9798"),
@@ -145,7 +199,7 @@ class GameControlTest : Spek({
             service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
             service.createGame(
                     CREATE_GAME_DTO.copy(
-                            playersIds = setOf(
+                            humanPlayersIds = setOf(
                                     UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"),
                                     UUID.fromString("f2dabe9d-7fe1-4e02-a78c-f95512f39d5d"),
                                     UUID.fromString("63668539-e0ce-41f7-9cfd-a0a36143d687"),
@@ -156,7 +210,7 @@ class GameControlTest : Spek({
             service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000002"))
             service.createGame(
                     CREATE_GAME_DTO.copy(
-                            playersIds = setOf(
+                            humanPlayersIds = setOf(
                                     UUID.fromString("67508179-ba0b-4ffc-b616-9d989961bdcf"),
                                     UUID.fromString("7b2a2e38-7ea8-4aa1-ace4-ce9dbf8d290e"),
                                     UUID.fromString("8ac54453-9536-436a-b892-c4c936c6f372"),
@@ -188,7 +242,7 @@ class GameControlTest : Spek({
             val service = createServiceForTesting()
             service.createGame(
                     CREATE_GAME_DTO.copy(
-                            playersIds = setOf(
+                            humanPlayersIds = setOf(
                                     UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"),
                                     UUID.fromString("496bbf40-a106-49cc-9c4b-ab466b79d7de"),
                                     UUID.fromString("d4fd97e0-7321-4e30-b72a-349d79bc9798"),
@@ -206,7 +260,7 @@ class GameControlTest : Spek({
             val service = createServiceForTesting()
             service.createGame(
                     CREATE_GAME_DTO.copy(
-                            playersIds = setOf(
+                            humanPlayersIds = setOf(
                                     UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"),
                                     UUID.fromString("496bbf40-a106-49cc-9c4b-ab466b79d7de"),
                                     UUID.fromString("d4fd97e0-7321-4e30-b72a-349d79bc9798"),
@@ -340,7 +394,7 @@ class GameControlTest : Spek({
             val service = createServiceForTesting()
             service.createGame(
                     CREATE_GAME_DTO.copy(
-                            playersIds = setOf(
+                            humanPlayersIds = setOf(
                                     UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"),
                                     UUID.fromString("496bbf40-a106-49cc-9c4b-ab466b79d7de"),
                                     UUID.fromString("d4fd97e0-7321-4e30-b72a-349d79bc9798"),
@@ -359,11 +413,11 @@ class GameControlTest : Spek({
             result shouldBeEqualTo MakeMoveResult.Error.PlayerIsNotInTheGame
         }
 
-        it("should return error when requesting player does not have next turn") {
+        it("should return error when requesting player does not have next move") {
             val service = createServiceForTesting()
             service.createGame(
                     CREATE_GAME_DTO.copy(
-                            playersIds = setOf(
+                            humanPlayersIds = setOf(
                                     UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"),
                                     UUID.fromString("496bbf40-a106-49cc-9c4b-ab466b79d7de"),
                                     UUID.fromString("d4fd97e0-7321-4e30-b72a-349d79bc9798"),
@@ -379,7 +433,10 @@ class GameControlTest : Spek({
                     )
             )
 
-            result shouldBeEqualTo MakeMoveResult.Error.NoPlayerTurn(playerWithNextTurnId = UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"))
+            result shouldBeEqualTo MakeMoveResult.Error.PlayerDoesNotHaveNextMove(
+                    nextMoveColor = "red",
+                    playerColor = "blue"
+            )
         }
 
         it("should return error when position is out of board") {
@@ -511,6 +568,29 @@ class GameControlTest : Spek({
                     )
             )
         }
+
+        it("should play bot move if bot has next move") {
+            val service = createServiceForTesting(random = Random(10))
+            service.createGame(
+                    CreateGameDto(
+                            humanPlayersIds = setOf(
+                                    UUID.fromString("c93ffe6e-8177-4be1-ab01-176c678c2837"), // yellow
+                                    UUID.fromString("110cf939-5ba1-4866-a4d1-e93cbf56f244") // red
+                            ),
+                            randomBotsCount = 2
+                    )
+            )
+            service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+
+            service.makeMove(
+                    MAKE_MOVE_DTO.copy(playerId = UUID.fromString("110cf939-5ba1-4866-a4d1-e93cbf56f244"))
+            )
+            val result = service.getGameState(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+
+            result should {
+                this is GetGameStateResult.Success && this.gameState.nextMoveColor == "yellow"
+            }
+        }
     }
 
     describe("submitting resignation") {
@@ -544,7 +624,7 @@ class GameControlTest : Spek({
             val service = createServiceForTesting()
             service.createGame(
                     CREATE_GAME_DTO.copy(
-                            playersIds = setOf(
+                            humanPlayersIds = setOf(
                                     UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"),
                                     UUID.fromString("496bbf40-a106-49cc-9c4b-ab466b79d7de"),
                                     UUID.fromString("d4fd97e0-7321-4e30-b72a-349d79bc9798"),
@@ -629,6 +709,29 @@ class GameControlTest : Spek({
                     resignedColor = "red"
             )
         }
+
+        it("should play bot move if bot has next move") {
+            val service = createServiceForTesting(random = Random(10))
+            service.createGame(
+                    CreateGameDto(
+                            humanPlayersIds = setOf(
+                                    UUID.fromString("c93ffe6e-8177-4be1-ab01-176c678c2837"), // yellow
+                                    UUID.fromString("110cf939-5ba1-4866-a4d1-e93cbf56f244") // red
+                            ),
+                            randomBotsCount = 2
+                    )
+            )
+            service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+
+            service.submitResignation(
+                    RESIGN_DTO.copy(requestingPlayerId = UUID.fromString("110cf939-5ba1-4866-a4d1-e93cbf56f244"))
+            )
+            val result = service.getGameState(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+
+            result should {
+                this is GetGameStateResult.Success && this.gameState.nextMoveColor == "yellow"
+            }
+        }
     }
 
     describe("cancelling all active games") {
@@ -689,7 +792,7 @@ class GameControlTest : Spek({
             val service = createServiceForTesting()
             service.createGame(
                     CREATE_GAME_DTO.copy(
-                            playersIds = setOf(
+                            humanPlayersIds = setOf(
                                     UUID.fromString("c37d4c5f-3880-4689-ac2f-8eaf46583a4c"),
                                     UUID.fromString("496bbf40-a106-49cc-9c4b-ab466b79d7de"),
                                     UUID.fromString("d4fd97e0-7321-4e30-b72a-349d79bc9798"),

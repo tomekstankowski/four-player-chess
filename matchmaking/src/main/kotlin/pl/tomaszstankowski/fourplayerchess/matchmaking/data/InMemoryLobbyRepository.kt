@@ -17,8 +17,8 @@ internal class InMemoryLobbyRepository(private val dataSource: InMemoryDataSourc
 
     override fun findByPlayerId(playerId: UUID): List<Lobby> =
             dataSource.lobbies.filter { lobby ->
-                dataSource.lobbyMemberships.any { membership ->
-                    membership.playerId == playerId && membership.lobbyId == lobby.id
+                dataSource.humanPlayerMemberships.any { membership ->
+                    membership.userId == playerId && membership.lobbyId == lobby.id
                 }
             }
 

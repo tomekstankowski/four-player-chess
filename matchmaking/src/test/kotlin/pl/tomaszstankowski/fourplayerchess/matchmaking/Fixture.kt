@@ -26,6 +26,15 @@ object Fixture {
             lobbyId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
             requestingPlayerId = UUID.fromString("ae312d19-71f0-4078-999a-a3d559c3fb2b")
     )
+    val ADD_RANDOM_BOT_DTO = AddRandomBotDto(
+            lobbyId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
+            requestingPlayerId = UUID.fromString("3e8d0140-105c-4d1b-95e6-6b655aad53f0")
+    )
+    val REMOVE_RANDOM_BOT_DTO = RemoveRandomBotDto(
+            lobbyId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
+            requestingPlayerId = UUID.fromString("3e8d0140-105c-4d1b-95e6-6b655aad53f0"),
+            botId = UUID.fromString("00000000-0000-0000-0000-000000000001")
+    )
     val START_GAME_DTO = StartGameDto(
             lobbyId = UUID.fromString("00000000-0000-0000-0000-000000000001"),
             requestingPlayerId = UUID.fromString("3e8d0140-105c-4d1b-95e6-6b655aad53f0")

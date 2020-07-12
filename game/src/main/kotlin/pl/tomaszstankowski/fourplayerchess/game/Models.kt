@@ -14,6 +14,14 @@ internal data class Game(val id: UUID,
         get() = isCommitted && !isCancelled && !isFinished
 }
 
-internal data class GamePlayer(val gameId: UUID,
-                               val playerId: UUID,
-                               val color: Color)
+internal sealed class Player {
+    abstract val gameId: UUID
+    abstract val color: Color
+
+    data class HumanPlayer(override val gameId: UUID,
+                           override val color: Color,
+                           val userId: UUID) : Player()
+
+    data class RandomBot(override val gameId: UUID,
+                         override val color: Color) : Player()
+}

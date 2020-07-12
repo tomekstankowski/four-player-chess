@@ -35,6 +35,20 @@ sealed class LeaveLobbyResult {
     data class LobbyNotFound(val lobbyId: UUID) : LeaveLobbyResult()
 }
 
+sealed class AddRandomBotResult {
+    data class Success(val membership: LobbyMembershipDto) : AddRandomBotResult()
+    data class LobbyNotFound(val lobbyId: UUID) : AddRandomBotResult()
+    object LobbyIsFull : AddRandomBotResult()
+    object RequestingPlayerNotAnOwner : AddRandomBotResult()
+}
+
+sealed class RemoveRandomBotResult {
+    object Removed : RemoveRandomBotResult()
+    data class LobbyNotFound(val lobbyId: UUID) : RemoveRandomBotResult()
+    data class BotNotFound(val botId: UUID) : RemoveRandomBotResult()
+    object RequestingPlayerNotAnOwner : RemoveRandomBotResult()
+}
+
 sealed class StartGameResult {
     data class Success(val game: GameDto) : StartGameResult()
     data class LobbyNotFound(val lobbyId: UUID) : StartGameResult()

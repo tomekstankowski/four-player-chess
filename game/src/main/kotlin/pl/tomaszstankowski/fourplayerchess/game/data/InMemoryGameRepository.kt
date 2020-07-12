@@ -22,9 +22,9 @@ internal class InMemoryGameRepository(private val dataSource: InMemoryDataSource
     override fun findById(id: UUID): Game? =
             dataSource.games.find { it.id == id }
 
-    override fun findByPlayerId(playerId: UUID): List<Game> =
+    override fun findByHumanPlayerUserId(playerId: UUID): List<Game> =
             dataSource.games.filter { game ->
-                dataSource.gamePlayers.any { it.playerId == playerId && it.gameId == game.id }
+                dataSource.humanPlayers.any { it.userId == playerId && it.gameId == game.id }
             }
 
     override fun findByIsCommittedIsTrueAndIsCancelledIsFalseAndIsFinishedIsFalse(): List<Game> =

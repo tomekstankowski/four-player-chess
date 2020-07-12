@@ -8,6 +8,7 @@ import org.springframework.util.IdGenerator
 import org.springframework.util.JdkIdGenerator
 import org.springframework.util.SimpleIdGenerator
 import pl.tomaszstankowski.fourplayerchess.data.executeWithResult
+import pl.tomaszstankowski.fourplayerchess.matchmaking.LobbyMembership.HumanPlayerMembership
 import pl.tomaszstankowski.fourplayerchess.matchmaking.data.*
 import java.time.Clock
 import java.time.Instant
@@ -18,9 +19,11 @@ import kotlin.ConcurrentModificationException
 class MatchmakingService internal constructor(
         private val clock: Clock,
         private val lobbyRepository: LobbyRepository,
-        private val lobbyMembershipRepository: LobbyMembershipRepository,
+        private val humanPlayerMembershipRepository: HumanPlayerMembershipRepository,
+        private val randomBotMembershipRepository: RandomBotMembershipRepository,
         private val transactionOperations: TransactionOperations,
         private val lobbyFactory: LobbyFactory,
+        private val randomBotFactory: RandomBotFactory,
         private val createGame: CreateGameUseCase,
         private val lobbyMessageBroker: LobbyMessageBroker
 ) {
@@ -37,7 +40,8 @@ class MatchmakingService internal constructor(
                         clock = clock,
                         idGenerator = JdkIdGenerator(),
                         lobbyRepository = JdbcLobbyRepository(dataSource),
-                        lobbyMembershipRepository = JdbcLobbyMembershipRepository(dataSource),
+                        humanPlayerMembershipRepository = JdbcHumanPlayerMembershipRepository(dataSource),
+                        randomBotMembershipRepository = JdbcRandomBotMembershipRepository(dataSource),
                         transactionOperations = TransactionTemplate(transactionManager),
                         createGameUseCase = createGameUseCase,
                         simpMessageSendingOperations = simpMessageSendingOperations
@@ -51,7 +55,8 @@ class MatchmakingService internal constructor(
                     clock = clock,
                     idGenerator = SimpleIdGenerator(),
                     lobbyRepository = InMemoryLobbyRepository(dataSource),
-                    lobbyMembershipRepository = InMemoryLobbyMembershipRepository(dataSource),
+                    humanPlayerMembershipRepository = InMemoryHumanPlayerMembershipRepository(dataSource),
+                    randomBotMembershipRepository = InMemoryRandomBotMembershipRepository(dataSource),
                     transactionOperations = TransactionOperations.withoutTransaction(),
                     createGameUseCase = createGameUseCase,
                     simpMessageSendingOperations = simpMessageSendingOperations
@@ -62,7 +67,8 @@ class MatchmakingService internal constructor(
                 clock: Clock,
                 idGenerator: IdGenerator,
                 lobbyRepository: LobbyRepository,
-                lobbyMembershipRepository: LobbyMembershipRepository,
+                humanPlayerMembershipRepository: HumanPlayerMembershipRepository,
+                randomBotMembershipRepository: RandomBotMembershipRepository,
                 transactionOperations: TransactionOperations,
                 createGameUseCase: CreateGameUseCase,
                 simpMessageSendingOperations: SimpMessageSendingOperations
@@ -70,9 +76,14 @@ class MatchmakingService internal constructor(
                 MatchmakingService(
                         clock = clock,
                         lobbyRepository = lobbyRepository,
-                        lobbyMembershipRepository = lobbyMembershipRepository,
+                        humanPlayerMembershipRepository = humanPlayerMembershipRepository,
+                        randomBotMembershipRepository = randomBotMembershipRepository,
                         transactionOperations = transactionOperations,
                         lobbyFactory = LobbyFactory(
+                                clock = clock,
+                                idGenerator = idGenerator
+                        ),
+                        randomBotFactory = RandomBotFactory(
                                 clock = clock,
                                 idGenerator = idGenerator
                         ),
@@ -92,13 +103,13 @@ class MatchmakingService internal constructor(
                     lobbyEditableDetails = details,
                     ownerId = dto.requestingPlayerId
             )
-            val ownerMembership = LobbyMembership(
+            val ownerMembership = HumanPlayerMembership(
                     lobbyId = lobby.id,
-                    playerId = lobby.ownerId,
+                    userId = lobby.ownerId,
                     joinedAt = Instant.now(clock)
             )
             lobbyRepository.create(lobby)
-            lobbyMembershipRepository.insert(ownerMembership)
+            humanPlayerMembershipRepository.insert(ownerMembership)
             return@executeWithResult CreateLobbyResult.Success(lobby.toDto())
         }
     }
@@ -116,16 +127,9 @@ class MatchmakingService internal constructor(
             if (lobby.ownerId != dto.requestingPlayerId) {
                 return@executeWithResult UpdateLobbyResult.RequestingPlayerNotAnOwner
             }
-
-            val updatedLobby = lobby.copy(
-                    name = details.name,
-                    version = lobby.version + 1
-            )
-            val isUpdated = lobbyRepository.updateIfVersionEquals(updatedLobby, lobby.version)
-            if (!isUpdated) {
-                throw ConcurrentModificationException()
-            }
-            return@executeWithResult UpdateLobbyResult.Success(updatedLobby.toDto())
+            val updatedLobby = lobby.copy(name = details.name)
+            val savedLobby = updateVersionAndSave(updatedLobby)
+            return@executeWithResult UpdateLobbyResult.Success(savedLobby.toDto())
         }
     }
 
@@ -138,12 +142,8 @@ class MatchmakingService internal constructor(
         if (lobby.ownerId != dto.requestingPlayerId) {
             return DeleteLobbyResult.RequestingPlayerNotAnOwner
         }
-        val deletedLobby = lobby.incrementVersion()
-                .copy(isDeleted = true)
-        val isUpdated = lobbyRepository.updateIfVersionEquals(deletedLobby, lobby.version)
-        if (!isUpdated) {
-            throw ConcurrentModificationException()
-        }
+        val deletedLobby = lobby.copy(isDeleted = true)
+        updateVersionAndSave(deletedLobby)
         lobbyMessageBroker.sendLobbyDeletedMessage(lobbyId)
         return DeleteLobbyResult.Deleted
     }
@@ -155,30 +155,27 @@ class MatchmakingService internal constructor(
         val txResult = transactionOperations.executeWithResult {
             val lobby = findActiveLobby(lobbyId)
                     ?: return@executeWithResult JoinLobbyResult.LobbyNotFound(lobbyId)
-            val memberships = lobbyMembershipRepository.findByLobbyIdOrderByCreatedAtDesc(lobbyId)
-            val isPlayerAlreadyInLobby = memberships.any { membership -> membership.playerId == requestingPlayerId }
+            val humanMemberships = humanPlayerMembershipRepository.findByLobbyId(lobbyId)
+            val isPlayerAlreadyInLobby = humanMemberships.any { membership -> membership.userId == requestingPlayerId }
             if (isPlayerAlreadyInLobby) {
                 return@executeWithResult JoinLobbyResult.PlayerAlreadyInLobby
             }
-            val isLobbyFull = memberships.size == REQUIRED_PLAYERS_COUNT
+            val randomBots = randomBotMembershipRepository.findByLobbyId(lobbyId)
+            val isLobbyFull = humanMemberships.size + randomBots.size == REQUIRED_PLAYERS_COUNT
             if (isLobbyFull) {
                 return@executeWithResult JoinLobbyResult.LobbyIsFull
             }
-            val newMembership = LobbyMembership(
-                    lobbyId,
-                    requestingPlayerId,
+            val newMembership = HumanPlayerMembership(
+                    lobbyId = lobbyId,
+                    userId = requestingPlayerId,
                     joinedAt = Instant.now(clock)
             )
-            lobbyMembershipRepository.insert(newMembership)
-            val updatedLobby = lobby.incrementVersion()
-            val isUpdated = lobbyRepository.updateIfVersionEquals(updatedLobby, lobby.version)
-            if (!isUpdated) {
-                throw ConcurrentModificationException()
-            }
+            humanPlayerMembershipRepository.insert(newMembership)
+            updateVersionAndSave(lobby)
             return@executeWithResult JoinLobbyResult.Success(newMembership.toDto())
         }
         if (txResult is JoinLobbyResult.Success) {
-            lobbyMessageBroker.sendPlayerJoinedLobbyMessage(playerId = requestingPlayerId, lobbyId = lobbyId)
+            lobbyMessageBroker.sendPlayerJoinedLobbyMessage(lobbyId, txResult.membership)
         }
         return txResult
     }
@@ -192,12 +189,12 @@ class MatchmakingService internal constructor(
             if (lobby.ownerId == requestingPlayerId) {
                 return@executeWithResult LeaveLobbyResult.OwnerMemberMustNotLeaveLobby
             }
-            val lobbyMemberships = lobbyMembershipRepository.findByLobbyIdOrderByCreatedAtDesc(lobbyId)
-            val isMember = lobbyMemberships.any { membership -> membership.playerId == requestingPlayerId }
+            val lobbyMemberships = humanPlayerMembershipRepository.findByLobbyId(lobbyId)
+            val isMember = lobbyMemberships.any { membership -> membership.userId == requestingPlayerId }
             if (!isMember) {
                 return@executeWithResult LeaveLobbyResult.RequestingPlayerNotAMember
             }
-            lobbyMembershipRepository.deleteByLobbyIdAndPlayerId(lobbyId = lobbyId, playerId = requestingPlayerId)
+            humanPlayerMembershipRepository.deleteByLobbyIdAndPlayerId(lobbyId = lobbyId, playerId = requestingPlayerId)
             return@executeWithResult LeaveLobbyResult.Left
         }
         if (txResult is LeaveLobbyResult.Left) {
@@ -206,9 +203,60 @@ class MatchmakingService internal constructor(
         return txResult
     }
 
+    fun addRandomBot(dto: AddRandomBotDto): AddRandomBotResult {
+        val lobbyId = dto.lobbyId
+        val txResult = transactionOperations.executeWithResult {
+            val lobby = findActiveLobby(lobbyId)
+                    ?: return@executeWithResult AddRandomBotResult.LobbyNotFound(lobbyId)
+            if (dto.requestingPlayerId != lobby.ownerId) {
+                return@executeWithResult AddRandomBotResult.RequestingPlayerNotAnOwner
+            }
+            val humanPlayers = humanPlayerMembershipRepository.findByLobbyId(lobbyId)
+            val randomBots = randomBotMembershipRepository.findByLobbyId(lobbyId)
+            val playersInLobbyCount = humanPlayers.size + randomBots.size
+            if (playersInLobbyCount == REQUIRED_PLAYERS_COUNT) {
+                return@executeWithResult AddRandomBotResult.LobbyIsFull
+            }
+            val newRandomBot = randomBotFactory.createBotMembership(lobbyId)
+            randomBotMembershipRepository.insert(newRandomBot)
+            updateVersionAndSave(lobby)
+            return@executeWithResult AddRandomBotResult.Success(newRandomBot.toDto())
+        }
+        if (txResult is AddRandomBotResult.Success) {
+            lobbyMessageBroker.sendRandomBotAddedToLobbyMessage(lobbyId, txResult.membership)
+        }
+        return txResult
+    }
+
+    fun removeRandomBot(dto: RemoveRandomBotDto): RemoveRandomBotResult {
+        val lobbyId = dto.lobbyId
+        val botId = dto.botId
+        val txResult = transactionOperations.executeWithResult {
+            val lobby = findActiveLobby(lobbyId)
+                    ?: return@executeWithResult RemoveRandomBotResult.LobbyNotFound(lobbyId)
+            if (dto.requestingPlayerId != lobby.ownerId) {
+                return@executeWithResult RemoveRandomBotResult.RequestingPlayerNotAnOwner
+            }
+            val randomBots = randomBotMembershipRepository.findByLobbyId(lobbyId)
+            val isBotFound = randomBots.any { it.botId == botId }
+            if (!isBotFound) {
+                return@executeWithResult RemoveRandomBotResult.BotNotFound(botId)
+            }
+            randomBotMembershipRepository.deleteByLobbyIdAndBotId(lobbyId, botId)
+            return@executeWithResult RemoveRandomBotResult.Removed
+        }
+        if (txResult is RemoveRandomBotResult.Removed) {
+            lobbyMessageBroker.sendRandomBotRemovedFromLobby(lobbyId = lobbyId, botId = botId)
+        }
+        return txResult
+    }
+
     fun getPlayersInLobby(lobbyId: UUID): List<LobbyMembershipDto>? {
         findActiveLobby(lobbyId) ?: return null
-        return lobbyMembershipRepository.findByLobbyIdOrderByCreatedAtDesc(lobbyId)
+        val humanPlayers = humanPlayerMembershipRepository.findByLobbyId(lobbyId).map { it as LobbyMembership }
+        val randomBots = randomBotMembershipRepository.findByLobbyId(lobbyId).map { it as LobbyMembership }
+        return (humanPlayers + randomBots)
+                .sortedBy { it.joinedAt }
                 .map { it.toDto() }
     }
 
@@ -225,12 +273,14 @@ class MatchmakingService internal constructor(
         if (dto.requestingPlayerId != lobby.ownerId) {
             return StartGameResult.RequestingPlayerNotAnOwner
         }
-        val memberships = lobbyMembershipRepository.findByLobbyIdOrderByCreatedAtDesc(lobbyId)
-        if (memberships.size < REQUIRED_PLAYERS_COUNT) {
-            return StartGameResult.NotEnoughPlayers(currentPlayersCount = memberships.size)
+        val humanPlayers = humanPlayerMembershipRepository.findByLobbyId(lobbyId)
+        val randomBots = randomBotMembershipRepository.findByLobbyId(lobbyId)
+        val playersCount = humanPlayers.size + randomBots.size
+        if (playersCount < REQUIRED_PLAYERS_COUNT) {
+            return StartGameResult.NotEnoughPlayers(currentPlayersCount = humanPlayers.size)
         }
-        val playersIds = memberships.map { membership -> membership.playerId }.toSet()
-        val gameId = createGame.createGame(playersIds)
+        val playersIds = humanPlayers.map { membership -> membership.userId }.toSet()
+        val gameId = createGame.createGame(playersIds = playersIds, randomBotsCount = randomBots.size)
         val updatedLobby = lobby.incrementVersion()
                 .copy(gameId = gameId)
         val isUpdated = lobbyRepository.updateIfVersionEquals(updatedLobby, lobby.version)
@@ -245,5 +295,14 @@ class MatchmakingService internal constructor(
     private fun findActiveLobby(id: UUID) =
             lobbyRepository.findById(id)
                     ?.takeIf { it.isActive }
+
+    private fun updateVersionAndSave(lobby: Lobby): Lobby {
+        val updatedLobby = lobby.incrementVersion()
+        val isUpdated = lobbyRepository.updateIfVersionEquals(updatedLobby, lobby.version)
+        if (!isUpdated) {
+            throw ConcurrentModificationException()
+        }
+        return updatedLobby
+    }
 }
 

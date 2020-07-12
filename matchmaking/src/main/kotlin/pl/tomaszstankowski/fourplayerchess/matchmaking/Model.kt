@@ -18,8 +18,15 @@ internal data class Lobby(
     internal val isActive get() = gameId == null && !isDeleted
 }
 
-internal data class LobbyMembership(
-        val lobbyId: UUID,
-        val playerId: UUID,
-        val joinedAt: Instant
-)
+internal sealed class LobbyMembership {
+    abstract val lobbyId: UUID
+    abstract val joinedAt: Instant
+
+    data class HumanPlayerMembership(override val lobbyId: UUID,
+                                     override val joinedAt: Instant,
+                                     val userId: UUID) : LobbyMembership()
+
+    data class RandomBotMembership(override val lobbyId: UUID,
+                                   override val joinedAt: Instant,
+                                   val botId: UUID) : LobbyMembership()
+}

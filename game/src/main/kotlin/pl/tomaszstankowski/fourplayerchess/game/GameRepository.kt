@@ -10,7 +10,7 @@ internal interface GameRepository {
 
     fun findById(id: UUID): Game?
 
-    fun findByPlayerId(playerId: UUID): List<Game>
+    fun findByHumanPlayerUserId(playerId: UUID): List<Game>
 
     fun findByIsCommittedIsTrueAndIsCancelledIsFalseAndIsFinishedIsFalse(): List<Game>
 }
