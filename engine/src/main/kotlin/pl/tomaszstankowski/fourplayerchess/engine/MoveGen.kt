@@ -2,7 +2,7 @@ package pl.tomaszstankowski.fourplayerchess.engine
 
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
 
-internal fun genLegalMoves(state: State, stateFeatures: StateFeatures): List<Move> {
+internal fun genLegalMoves(state: State, helperState: HelperState, stateFeatures: StateFeatures): List<Move> {
     val moves = ArrayList<Move>()
     val addMoveIfLegal = { move: Move ->
         val isLegalMove = isLegalMove(move, state, stateFeatures)
@@ -10,19 +10,15 @@ internal fun genLegalMoves(state: State, stateFeatures: StateFeatures): List<Mov
             moves += move
         }
     }
-    Position.allPositions.forEach { pos ->
-        val square = state.squares.byPosition(pos)
-        if (square is Square.Occupied) {
-            val piece = square.piece
-            if (piece.color == state.nextMoveColor) {
-                when (square.piece.type) {
-                    Pawn -> genPawnPseudoMoves(pos, state, forEach = addMoveIfLegal)
-                    Knight -> genKnightPseudoMoves(pos, state, forEach = addMoveIfLegal)
-                    Bishop -> genBishopPseudoMoves(pos, state, forEach = addMoveIfLegal)
-                    Rook -> genRookPseudoMoves(pos, state, forEach = addMoveIfLegal)
-                    Queen -> genQueenPseudoMoves(pos, state, forEach = addMoveIfLegal)
-                    King -> genKingPseudoMoves(pos, state, forEach = addMoveIfLegal)
-                }
+    helperState.pieceList.forEach { (piece, pos) ->
+        if (piece.color == state.nextMoveColor) {
+            when (piece.type) {
+                Pawn -> genPawnPseudoMoves(pos, state, forEach = addMoveIfLegal)
+                Knight -> genKnightPseudoMoves(pos, state, forEach = addMoveIfLegal)
+                Bishop -> genBishopPseudoMoves(pos, state, forEach = addMoveIfLegal)
+                Rook -> genRookPseudoMoves(pos, state, forEach = addMoveIfLegal)
+                Queen -> genQueenPseudoMoves(pos, state, forEach = addMoveIfLegal)
+                King -> genKingPseudoMoves(pos, state, forEach = addMoveIfLegal)
             }
         }
     }

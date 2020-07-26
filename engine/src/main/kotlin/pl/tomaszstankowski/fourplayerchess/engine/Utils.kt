@@ -130,7 +130,7 @@ internal fun Move.isPawnPromotion(state: State): Boolean {
     return this.isPawnAdvance(state) && to.isPawnPromotionPositionForColor(state.nextMoveColor)
 }
 
-internal fun Move.isCapture(state: State): Boolean {
+internal fun Move.isRegularCapture(state: State): Boolean {
     val targetSquare = state.squares.byPosition(to)
     return targetSquare is Square.Occupied
             && targetSquare.piece.color != state.nextMoveColor
@@ -146,3 +146,6 @@ internal fun squareOf(color: Color, pieceType: PieceType) =
         Square.Occupied.by(color, pieceType)
 
 internal fun emptySquare() = Square.Empty
+
+internal val Position.isLightSquare: Boolean
+    get() = (file + rank) % 2 == 0

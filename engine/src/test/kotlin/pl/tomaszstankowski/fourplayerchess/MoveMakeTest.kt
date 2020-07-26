@@ -1039,4 +1039,172 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
     }
+
+    test("draw when four kings only remained") {
+        val engine = createEngineWithStateFromFen("""
+            R-0,0,0,0-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            14/
+            14/
+            5,yK,8/
+            10,gK,3/
+            5,bK,2,yP,5/
+            8,rK,5/
+            14/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.makeMove("i6", "i7")
+
+        engine.isDraw shouldBeEqualTo true
+    }
+
+    test("draw when three kings only remained") {
+        val engine = createEngineWithStateFromFen("""
+            R-0,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            14/
+            14/
+            5,yK,8/
+            14/
+            5,bK,2,yP,5/
+            8,rK,5/
+            14/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.makeMove("i6", "i7")
+
+        engine.isDraw shouldBeEqualTo true
+    }
+
+    test("draw when two kings only remained") {
+        val engine = createEngineWithStateFromFen("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            14/
+            14/
+            5,yK,8/
+            14/
+            8,yP,5/
+            8,rK,5/
+            14/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.makeMove("i6", "i7")
+
+        engine.isDraw shouldBeEqualTo true
+    }
+
+    test("draw when king vs king and knight remained") {
+        val engine = createEngineWithStateFromFen("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            14/
+            14/
+            5,yK,8/
+            14/
+            8,yP,5/
+            5,yN,2,rK,5/
+            14/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.makeMove("i6", "i7")
+
+        engine.isDraw shouldBeEqualTo true
+    }
+
+    test("draw when king vs king and bishop remained") {
+        val engine = createEngineWithStateFromFen("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            14/
+            14/
+            5,yK,8/
+            14/
+            8,yP,5/
+            5,yB,2,rK,5/
+            14/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.makeMove("i6", "i7")
+
+        engine.isDraw shouldBeEqualTo true
+    }
+
+    test("draw when king and bishop vs king and bishop remained and bishops have same type") {
+        val engine = createEngineWithStateFromFen("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            14/
+            14/
+            5,yK,8/
+            14/
+            8,yP,1,rB,3/
+            5,yB,2,rK,5/
+            14/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.makeMove("i6", "i7")
+
+        engine.isDraw shouldBeEqualTo true
+    }
+
+    test("not a draw when king and bishop vs king and bishop remained but bishops do not have same type") {
+        val engine = createEngineWithStateFromFen("""
+            R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            14/
+            14/
+            5,yK,8/
+            10,rB,3/
+            8,yP,5/
+            5,yB,2,rK,5/
+            14/
+            14/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.makeMove("i6", "i7")
+
+        engine.isDraw shouldBeEqualTo false
+    }
 })

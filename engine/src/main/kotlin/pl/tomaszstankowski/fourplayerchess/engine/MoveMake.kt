@@ -5,30 +5,32 @@ import pl.tomaszstankowski.fourplayerchess.engine.Castling.QueenSide
 import pl.tomaszstankowski.fourplayerchess.engine.MoveClaim.PromotionMoveClaim
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
 
-internal data class MakeMoveOutcome(val state: State, val stateFeatures: StateFeatures, val legalMoves: List<Move>)
+internal data class MakeMoveOutcome(val state: State, val helperState: HelperState, val stateFeatures: StateFeatures, val legalMoves: List<Move>)
 
-internal fun makeMove(moveClaim: MoveClaim, state: State): MakeMoveOutcome {
+internal fun makeMove(moveClaim: MoveClaim, state: State, helperState: HelperState): MakeMoveOutcome {
+    val (newSquares, newPieceList) = getNewBoardAndPieceList(moveClaim, state, helperState)
     val pseudoState = state.copy(
-            squares = getNewBoard(moveClaim, state),
+            squares = newSquares,
             nextMoveColor = getNewNextMoveColor(state),
             enPassantSquares = getNewEnPassantSquares(moveClaim, state),
             castlingOptions = getNewColorToCastlingOptions(moveClaim, state),
             plyCount = getNewPlyCount(moveClaim, state)
     )
-    return getLegalStateAndStateFeatures(pseudoState)
+    val newHelperState = helperState.copy(pieceList = newPieceList)
+    return getLegalStateAndStateFeatures(pseudoState, newHelperState)
 }
 
-internal fun makeResignation(color: Color, state: State): MakeMoveOutcome {
+internal fun makeResignation(color: Color, state: State, helperState: HelperState): MakeMoveOutcome {
     val pseudoState = state.copy(
             eliminatedColors = state.eliminatedColors + color,
             nextMoveColor = if (state.nextMoveColor == color) getNewNextMoveColor(state) else state.nextMoveColor
     )
-    return getLegalStateAndStateFeatures(pseudoState)
+    return getLegalStateAndStateFeatures(pseudoState, helperState)
 }
 
-private tailrec fun getLegalStateAndStateFeatures(state: State): MakeMoveOutcome {
-    val stateFeatures = getStateFeatures(state)
-    val legalMoves = genLegalMoves(state, stateFeatures)
+private tailrec fun getLegalStateAndStateFeatures(state: State, helperState: HelperState): MakeMoveOutcome {
+    val stateFeatures = getStateFeatures(state, helperState)
+    val legalMoves = genLegalMoves(state, helperState, stateFeatures)
     if (legalMoves.isEmpty()) {
         val isCheck = stateFeatures.checks.getValue(state.nextMoveColor).isNotEmpty()
         val isEliminated = isCheck || state.eliminatedColors.size < 2
@@ -38,51 +40,68 @@ private tailrec fun getLegalStateAndStateFeatures(state: State): MakeMoveOutcome
                             eliminatedColors = state.eliminatedColors + state.nextMoveColor,
                             enPassantSquares = state.enPassantSquares - state.nextMoveColor,
                             nextMoveColor = getNewNextMoveColor(state)
-                    )
+                    ),
+                    helperState
             )
     }
-    return MakeMoveOutcome(state, stateFeatures, legalMoves)
+    return MakeMoveOutcome(state, helperState, stateFeatures, legalMoves)
 }
 
-private fun getNewBoard(moveClaim: MoveClaim, state: State): Board {
+private fun getNewBoardAndPieceList(moveClaim: MoveClaim,
+                                    state: State,
+                                    helperState: HelperState): Pair<Board, PieceList> {
     val move = moveClaim.move
     val color = state.nextMoveColor
-    return state.squares.withPieceMoved(move.from, move.to)
-            .let { squares ->
+    return (state.squares to helperState.pieceList)
+            .let { (squares, pieceList) ->
+                val newSquares = squares.withPieceMoved(move.from, move.to)
+                val newPieceList = pieceList.withPieceMoved2(move.from, move.to)
+                newSquares to newPieceList
+            }
+            .let { (squares, pieceList) ->
                 if (move.isKingSideCastling(state)) {
                     val oldRookPos = color.defaultKingPosition.offset(color.kingSideVector, 3)
                     val newRookPos = color.defaultKingPosition.offset(color.kingSideVector, 1)
-                    squares.withPieceMoved(oldRookPos, newRookPos)
+                    val newSquares = squares.withPieceMoved(oldRookPos, newRookPos)
+                    val newPieceList = pieceList.withPieceMoved2(oldRookPos, newRookPos)
+                    newSquares to newPieceList
                 } else {
-                    squares
+                    squares to pieceList
                 }
             }
-            .let { squares ->
+            .let { (squares, pieceList) ->
                 if (move.isQueenSideCastling(state)) {
                     val oldRookPos = color.defaultKingPosition.offset(color.queenSideVector, 4)
                     val newRookPos = color.defaultKingPosition.offset(color.queenSideVector, 1)
-                    squares.withPieceMoved(oldRookPos, newRookPos)
+                    val newSquares = squares.withPieceMoved(oldRookPos, newRookPos)
+                    val newPieceList = pieceList.withPieceMoved2(oldRookPos, newRookPos)
+                    newSquares to newPieceList
                 } else {
-                    squares
+                    squares to pieceList
                 }
             }
-            .let { squares ->
+            .let { (squares, pieceList) ->
                 if (move.isCaptureByEnPassant(state)) {
                     val capturedPawnColor = state.enPassantSquares
                             .toList()
                             .first { (_, pos) -> pos == move.to }
                             .first
                     val capturedPawnPosition = move.to.offset(capturedPawnColor.pawnForwardVector)
-                    squares.replaceSquareOnPosition(capturedPawnPosition, Square.Empty)
+                    val newSquares = squares.replaceSquareOnPosition(capturedPawnPosition, Square.Empty)
+                    val newPieceList = pieceList.withPieceRemoved(at = capturedPawnPosition)
+                    newSquares to newPieceList
                 } else {
-                    squares
+                    squares to pieceList
                 }
             }
-            .let { squares ->
+            .let { (squares, pieceList) ->
                 if (moveClaim is PromotionMoveClaim) {
-                    squares.replaceSquareOnPosition(move.to, Square.Occupied.by(color, moveClaim.pieceType))
+                    val newSquare = Square.Occupied.by(color, moveClaim.pieceType)
+                    val newSquares = squares.replaceSquareOnPosition(move.to, newSquare)
+                    val newPieceList = pieceList.withPieceReplaced(at = move.to, newPiece = newSquare.piece)
+                    newSquares to newPieceList
                 } else {
-                    squares
+                    squares to pieceList
                 }
             }
 }
@@ -105,6 +124,27 @@ private inline fun <E> List<List<E>>.replace(i: Int, j: Int, func: (E) -> E): Li
                 func(e)
             }
         }
+
+// ends with 2 to avoid name clash
+private fun PieceList.withPieceMoved2(from: Position, to: Position): PieceList =
+        mapNotNull { (piece, pos) ->
+            when (pos) {
+                from -> piece to to
+                to -> null
+                else -> piece to pos
+            }
+        }
+
+private fun PieceList.withPieceReplaced(at: Position, newPiece: Piece): PieceList =
+        map { (piece, pos) ->
+            if (pos == at)
+                newPiece to pos
+            else
+                piece to pos
+        }
+
+private fun PieceList.withPieceRemoved(at: Position): PieceList =
+        filter { (_, pos) -> pos != at }
 
 private fun getNewNextMoveColor(state: State): Color {
     return getNewNextMoveColor(state.eliminatedColors, state.nextMoveColor)
@@ -183,7 +223,7 @@ private val Color.defaultKingPosition: Position
 
 private fun getNewPlyCount(moveClaim: MoveClaim, state: State): PlyCount {
     val move = moveClaim.move
-    if (move.isCapture(state) || move.isPawnAdvance(state)) {
+    if (move.isRegularCapture(state) || move.isPawnAdvance(state)) {
         return PlyCount(0)
     }
     return PlyCount(state.plyCount.count + 1)

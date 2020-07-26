@@ -1,45 +1,41 @@
 package pl.tomaszstankowski.fourplayerchess.engine
 
-internal fun getStateFeatures(state: State): StateFeatures {
+internal fun getStateFeatures(state: State, helperState: HelperState): StateFeatures {
     val attackedPositions = Color.values().map { color -> color to HashSet<Position>() }.toMap()
     val pins = Color.values().map { color -> color to ArrayList<Pin>() }.toMap()
     val checks = Color.values().map { color -> color to ArrayList<Check>() }.toMap()
 
-    Position.allPositions.forEach { position ->
-        val square = state.squares.byPosition(position)
-        if (square is Square.Occupied) {
-            val piece = square.piece
-            if (state.eliminatedColors.contains(piece.color)) {
-                return@forEach
-            }
-            val attackedPositionsForColor = attackedPositions.getValue(piece.color)
-            findChecks(
-                    checkingPiecePosition = position,
-                    checkingPiece = piece,
-                    state = state,
-                    forEach = { check ->
-                        val checkedKingColor =
-                                (state.squares.byPosition(check.checkedKingPosition) as Square.Occupied).piece.color
-                        checks.getValue(checkedKingColor) += check
-                    }
-            )
-            getAttackedPositions(
-                    piecePosition = position,
-                    piece = piece,
-                    state = state,
-                    forEach = { pos -> attackedPositionsForColor += pos }
-            )
-            findPins(
-                    pinningPiecePosition = position,
-                    pinningPiece = piece,
-                    state = state,
-                    forEach = { pin ->
-                        val pinnedPieceColor =
-                                (state.squares.byPosition(pin.pinnedPiecePosition) as Square.Occupied).piece.color
-                        pins.getValue(pinnedPieceColor) += pin
-                    }
-            )
+    helperState.pieceList.forEach { (piece, position) ->
+        if (state.eliminatedColors.contains(piece.color)) {
+            return@forEach
         }
+        val attackedPositionsForColor = attackedPositions.getValue(piece.color)
+        findChecks(
+                checkingPiecePosition = position,
+                checkingPiece = piece,
+                state = state,
+                forEach = { check ->
+                    val checkedKingColor =
+                            (state.squares.byPosition(check.checkedKingPosition) as Square.Occupied).piece.color
+                    checks.getValue(checkedKingColor) += check
+                }
+        )
+        getAttackedPositions(
+                piecePosition = position,
+                piece = piece,
+                state = state,
+                forEach = { pos -> attackedPositionsForColor += pos }
+        )
+        findPins(
+                pinningPiecePosition = position,
+                pinningPiece = piece,
+                state = state,
+                forEach = { pin ->
+                    val pinnedPieceColor =
+                            (state.squares.byPosition(pin.pinnedPiecePosition) as Square.Occupied).piece.color
+                    pins.getValue(pinnedPieceColor) += pin
+                }
+        )
     }
 
     return StateFeatures(
