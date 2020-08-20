@@ -21,7 +21,7 @@ private sealed class RowToken {
     data class OccupiedSquareToken(val square: Square.Occupied) : RowToken()
 }
 
-internal object FenGrammar : Grammar<State>() {
+internal object FenGrammar : Grammar<FenState>() {
     private val upperB by token("B")
     private val upperG by token("G")
     private val upperK by token("K")
@@ -83,17 +83,17 @@ internal object FenGrammar : Grammar<State>() {
             (one and zero) map { (it.t1.text + it.t2.text).toInt() }) or (
             pDigitExceptZero map { it.text.toInt() }
             ) map { it.dec() }
-    private val pPosition = pFile and pRank map { (file, rank) -> Position.ofFileAndRank(file, rank) }
-    private val pEnPassantSquare: Parser<Position?> = pPosition or (zero asJust null)
-    private val pEnPassantSquares: Parser<EnPassantSquares> = pEnPassantSquare and skip(comma) and
+    private val pCoordinates = pFile and pRank map { (file, rank) -> Coordinates.ofFileAndRank(file, rank) }
+    private val pEnPassantSquare: Parser<Coordinates?> = pCoordinates or (zero asJust null)
+    private val pEnPassantSquares: Parser<Map<Color, Coordinates>> = pEnPassantSquare and skip(comma) and
             pEnPassantSquare and skip(comma) and
             pEnPassantSquare and skip(comma) and
-            pEnPassantSquare map { (redSquareOpt, greenSquareOpt, blueSquareOpt, yellowSquareOpt) ->
+            pEnPassantSquare map { (redSquareOpt, blueSquareOpt, yellowSquareOpt, greenSquareOpt) ->
         listOfNotNull(
                 redSquareOpt?.let { Color.Red to it },
-                greenSquareOpt?.let { Color.Green to it },
                 blueSquareOpt?.let { Color.Blue to it },
-                yellowSquareOpt?.let { Color.Yellow to it }
+                yellowSquareOpt?.let { Color.Yellow to it },
+                greenSquareOpt?.let { Color.Green to it }
 
         ).toMap()
     }
@@ -111,7 +111,7 @@ internal object FenGrammar : Grammar<State>() {
         )
     }
 
-    private val pPlyCount = pNumber map { num -> PlyCount.of(num) }
+    private val pPlyCount = pNumber
 
     private val pPawn = upperP asJust PieceType.Pawn
     private val pKnight = upperN asJust PieceType.Knight
@@ -157,7 +157,7 @@ internal object FenGrammar : Grammar<State>() {
         }
 
     }
-    private val pRow = pRowTokensAndCheckIfRowLengthIsValid map { tokens ->
+    private val pRow: Parser<Row> = pRowTokensAndCheckIfRowLengthIsValid map { tokens ->
         tokens.map { token ->
             when (token) {
                 is RowToken.EmptySquaresToken -> List(size = token.count) { Square.Empty }
@@ -165,11 +165,12 @@ internal object FenGrammar : Grammar<State>() {
             }
         }
                 .flatten()
+                .toTypedArray<Square?>()
     }
     private val pRowsUnchecked = BOARD_SIZE - 1 times (pRow and skip(slash) and skipWhiteSpaceOpt) and (
-            pRow and skipWhiteSpaceOpt) map { (rows, row) -> rows.plus<Row>(row).reversed() }
+            pRow and skipWhiteSpaceOpt) map { (rows, row) -> rows.plus<Row>(row).reversed().toTypedArray() }
 
-    private fun Board.withDisabledSquaresRemoved() =
+    private fun Board.withDisabledSquaresRemoved(): Array<Row> =
             mapIndexed { rowIndex, row ->
                 if (rowIndex in 0 until DISABLED_AREA_SIZE
                         || rowIndex in BOARD_SIZE - DISABLED_AREA_SIZE until BOARD_SIZE) {
@@ -180,11 +181,11 @@ internal object FenGrammar : Grammar<State>() {
                         } else {
                             square
                         }
-                    }
+                    }.toTypedArray()
                 } else {
                     row
                 }
-            }
+            }.toTypedArray()
 
     private val pBoard = object : Parser<Board> {
         override fun tryParse(tokens: Sequence<TokenMatch>): ParseResult<Board> {
@@ -225,28 +226,27 @@ internal object FenGrammar : Grammar<State>() {
             pEnPassantSquares and skip(hyphen) and
             pPlyCount and skip(hyphen) and skipWhiteSpaceOpt and
             pBoard map { (nextMoveColor, eliminatedColorsFlags, kingSideCastlingFlags, queenSideCastlingFlags, enPassantSquares, plyCount, board) ->
-        State(
-                squares = board,
+        FenState(
+                board = board,
                 eliminatedColors = eliminatedColorsFlags.filterValues { isEliminated -> isEliminated }.keys,
                 nextMoveColor = nextMoveColor,
                 plyCount = plyCount,
-                castlingOptions = CastlingOptions(
-                        Color.values().map { color ->
-                            val kingSide = kingSideCastlingFlags[color]
-                                    ?.takeIf { canCastle -> canCastle }
-                                    ?.let { setOf(Castling.KingSide) }
-                                    ?: emptySet()
-                            val queenSide = queenSideCastlingFlags[color]
-                                    ?.takeIf { canCastle -> canCastle }
-                                    ?.let { setOf(Castling.QueenSide) }
-                                    ?: emptySet()
-                            color to (kingSide + queenSide)
-                        }.toMap()
-                ),
+                castlingOptions =
+                Color.values().map { color ->
+                    val kingSide = kingSideCastlingFlags[color]
+                            ?.takeIf { canCastle -> canCastle }
+                            ?.let { setOf(Castling.KingSide) }
+                            ?: emptySet()
+                    val queenSide = queenSideCastlingFlags[color]
+                            ?.takeIf { canCastle -> canCastle }
+                            ?.let { setOf(Castling.QueenSide) }
+                            ?: emptySet()
+                    color to (kingSide + queenSide)
+                }.toMap(),
                 enPassantSquares = enPassantSquares
         )
     }
 
-    override val rootParser: Parser<State>
+    override val rootParser: Parser<FenState>
         get() = pState
 }

@@ -2,13 +2,8 @@ package pl.tomaszstankowski.fourplayerchess
 
 import org.amshove.kluent.shouldBeEqualTo
 import org.spekframework.spek2.Spek
-import pl.tomaszstankowski.fourplayerchess.engine.Check
+import pl.tomaszstankowski.fourplayerchess.engine.*
 import pl.tomaszstankowski.fourplayerchess.engine.Color.*
-import pl.tomaszstankowski.fourplayerchess.engine.Move
-import pl.tomaszstankowski.fourplayerchess.engine.MoveClaim
-import pl.tomaszstankowski.fourplayerchess.engine.PieceType.Knight
-import pl.tomaszstankowski.fourplayerchess.engine.PieceType.Queen
-import pl.tomaszstankowski.fourplayerchess.engine.Position
 
 class MoveMakeTest : Spek({
 
@@ -33,7 +28,7 @@ class MoveMakeTest : Spek({
 
         val newState = engine.getStateAfterMove("i1", "f4")
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-4-
             3,yR,yN,yB,yK,yQ,yB,1,yR,3/
             3,yP,yP,yP,yP,yP,yP,yP,yP,3/
@@ -73,7 +68,7 @@ class MoveMakeTest : Spek({
 
         val newState = engine.getStateAfterMove("i1", "b8")
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-0-
             3,yR,yN,yB,yK,yQ,yB,1,yR,3/
             3,yP,yP,yP,yP,yP,yP,yP,yP,3/
@@ -113,7 +108,7 @@ class MoveMakeTest : Spek({
 
         val newState = engine.getStateAfterMove("g2", "g4")
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-1,1,1,1-g3,0,0,0-0-
             3,yR,yN,yB,yK,yQ,yB,1,yR,3/
             3,yP,yP,yP,yP,yP,yP,yP,yP,3/
@@ -152,14 +147,15 @@ class MoveMakeTest : Spek({
         """.trimIndent())
 
         engine.makeMove(
-                MoveClaim.PromotionMoveClaim.getOrNull(
-                        move = Move(from = Position.parse("i7"), to = Position.parse("i8")),
-                        pieceType = Knight
-                )!!
+                Promotion(
+                        from = Coordinates.parse("i7"),
+                        to = Coordinates.parse("i8"),
+                        pieceType = PromotionPieceType.Knight
+                )
         )
-        val newState = engine.state
+        val newState = engine.getUIState()
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
             14/
             5,yP,yK,yB,6/
@@ -198,8 +194,8 @@ class MoveMakeTest : Spek({
         """.trimIndent())
 
         val result = engine.makeMove(
-                MoveClaim.RegularMoveClaim(
-                        move = Move(from = Position.parse("i7"), to = Position.parse("i8"))
+                RegularMove(
+                        from = Coordinates.parse("i7"), to = Coordinates.parse("i8")
                 )
         )
 
@@ -226,10 +222,11 @@ class MoveMakeTest : Spek({
         """.trimIndent())
 
         val result = engine.makeMove(
-                MoveClaim.PromotionMoveClaim.getOrNull(
-                        move = Move(from = Position.parse("h6"), to = Position.parse("h7")),
-                        pieceType = Queen
-                )!!
+                Promotion(
+                        from = Coordinates.parse("h6"),
+                        to = Coordinates.parse("h7"),
+                        pieceType = PromotionPieceType.Queen
+                )
         )
 
         result shouldBeEqualTo false
@@ -256,7 +253,7 @@ class MoveMakeTest : Spek({
 
         val newState = engine.getStateAfterMove("h1", "j1")
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-0,1,1,1-0,1,1,1-0,0,0,0-1-
             3,yR,1,yB,yK,yQ,yB,1,yR,3/
             4,yP,yP,yP,yP,yP,yP,yP,3/
@@ -296,7 +293,7 @@ class MoveMakeTest : Spek({
 
         val newState = engine.getStateAfterMove("h1", "f1")
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-0,1,1,1-0,1,1,1-0,0,0,0-1-
             3,yR,1,yB,yK,yQ,yB,1,yR,3/
             4,yP,yP,yP,yP,yP,yP,yP,3/
@@ -336,7 +333,7 @@ class MoveMakeTest : Spek({
 
         val newState = engine.getStateAfterMove("h1", "g1")
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-0,1,1,1-0,1,1,1-0,0,0,0-1-
             3,yR,1,yB,yK,yQ,yB,1,yR,3/
             4,yP,yP,yP,yP,yP,yP,yP,3/
@@ -376,7 +373,7 @@ class MoveMakeTest : Spek({
 
         val newState = engine.getStateAfterMove("d1", "e1")
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-0,1,1,1-0,0,0,0-1-
             3,yR,1,yB,yK,yQ,yB,1,yR,3/
             4,yP,yP,yP,yP,yP,yP,yP,3/
@@ -397,7 +394,7 @@ class MoveMakeTest : Spek({
 
     test("capture by en passant") {
         val engine = createEngineWithStateFromFen("""
-            R-0,0,0,0-1,1,1,1-1,1,1,1-0,0,c5,0-2-
+            R-0,0,0,0-1,1,1,1-1,1,1,1-0,c5,0,0-2-
             3,yR,1,yB,yK,yQ,yB,yN,yR,3/
             3,yP,yP,yP,yP,yP,yP,yP,yP,3/
             5,yN,8/
@@ -416,7 +413,7 @@ class MoveMakeTest : Spek({
 
         val newState = engine.getStateAfterMove("d4", "c5")
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-0-
             3,yR,1,yB,yK,yQ,yB,yN,yR,3/
             3,yP,yP,yP,yP,yP,yP,yP,yP,3/
@@ -456,7 +453,7 @@ class MoveMakeTest : Spek({
 
         val newState = engine.getStateAfterMove("e3", "d4")
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-0-
             3,yR,1,yB,yK,yQ,yB,yN,yR,3/
             3,yP,yP,yP,yP,yP,yP,yP,yP,3/
@@ -496,7 +493,7 @@ class MoveMakeTest : Spek({
 
         val newState = engine.getStateAfterMove("f1", "c4")
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-0,0,0,0-1,1,1,1-1,1,1,1-0,0,0,0-3-
             3,yR,1,yB,yK,yQ,yB,yN,yR,3/
             3,yP,yP,yP,yP,yP,yP,yP,yP,3/
@@ -536,7 +533,7 @@ class MoveMakeTest : Spek({
 
         val newState = engine.getStateAfterMove("h13", "j11")
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-1,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-1-
             14/
             5,yP,yK,7/
@@ -576,7 +573,7 @@ class MoveMakeTest : Spek({
 
         val newState = engine.getStateAfterMove("h4", "h3")
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             B-1,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-5-
             14/
             5,yP,1,yB,6/
@@ -615,10 +612,10 @@ class MoveMakeTest : Spek({
         """.trimIndent())
 
         val newState = engine.getStateAfterMove("g4", "g3")
-        engine.isDraw shouldBeEqualTo true
-        engine.winningColor shouldBeEqualTo null
+        newState.isGameOver shouldBeEqualTo true
+        newState.winningColor shouldBeEqualTo null
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             R-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-2-
             14/
             14/
@@ -657,10 +654,10 @@ class MoveMakeTest : Spek({
         """.trimIndent())
 
         val newState = engine.getStateAfterMove("m11", "n11")
-        engine.isDraw shouldBeEqualTo false
-        engine.winningColor shouldBeEqualTo Yellow
+        newState.isGameOver shouldBeEqualTo true
+        newState.winningColor shouldBeEqualTo Yellow
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             Y-1,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-6-
             14/
             14/
@@ -711,11 +708,12 @@ class MoveMakeTest : Spek({
         engine.makeMove("k7", "k4")
         engine.claimDraw()
 
-        engine.isDraw shouldBeEqualTo true
-        engine.winningColor shouldBeEqualTo null
+        val state = engine.getUIState()
+        state.isGameOver shouldBeEqualTo true
+        state.winningColor shouldBeEqualTo null
     }
 
-    test("draw by threefold repetition does not need to be claimed immediately") {
+    test("draw by threefold repetition must be claimed immediately") {
         val engine = createEngineWithStateFromFen("""
             Y-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
             14/
@@ -749,13 +747,14 @@ class MoveMakeTest : Spek({
         engine.makeMove("k4", "n7")
         engine.claimDraw()
 
-        engine.isDraw shouldBeEqualTo true
-        engine.winningColor shouldBeEqualTo null
+        val state = engine.getUIState()
+        state.isGameOver shouldBeEqualTo false
+        state.winningColor shouldBeEqualTo null
     }
 
     test("draw by fifty move rule") {
         val engine = createEngineWithStateFromFen("""
-            Y-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-49-
+            Y-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-99-
             14/
             14/
             14/
@@ -775,13 +774,14 @@ class MoveMakeTest : Spek({
         engine.makeMove("j6", "k4")
         engine.claimDraw()
 
-        engine.isDraw shouldBeEqualTo true
-        engine.winningColor shouldBeEqualTo null
+        val state = engine.getUIState()
+        state.isGameOver shouldBeEqualTo true
+        state.winningColor shouldBeEqualTo null
     }
 
     test("draw by fifty move rule does not need by claimed immediately") {
         val engine = createEngineWithStateFromFen("""
-            Y-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-49-
+            Y-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-99-
             14/
             14/
             14/
@@ -803,8 +803,9 @@ class MoveMakeTest : Spek({
         engine.makeMove("k4", "l6")
         engine.claimDraw()
 
-        engine.isDraw shouldBeEqualTo true
-        engine.winningColor shouldBeEqualTo null
+        val state = engine.getUIState()
+        state.isGameOver shouldBeEqualTo true
+        state.winningColor shouldBeEqualTo null
     }
 
     test("draw not allowed unless threefold repetition or fifty move rule") {
@@ -838,7 +839,8 @@ class MoveMakeTest : Spek({
         engine.makeMove("m4", "m5")
         engine.claimDraw()
 
-        engine.isDraw shouldBeEqualTo false
+        val state = engine.getUIState()
+        state.isGameOver shouldBeEqualTo false
     }
 
     test("check two kings") {
@@ -862,14 +864,14 @@ class MoveMakeTest : Spek({
 
         engine.makeMove("g4", "g9")
 
-        engine.stateFeatures.checks shouldBeEqualTo mapOf(
+        engine.getUIState().checks shouldBeEqualTo mapOf(
                 Red to emptyList(),
                 Blue to listOf(
-                        Check(checkingPiecePosition = Position.parse("g9"), checkedKingPosition = Position.parse("c9"))
+                        Check(checkingPieceCoordinates = Coordinates.parse("g9"), checkedKingCoordinates = Coordinates.parse("c9"))
                 ),
                 Yellow to emptyList(),
                 Green to listOf(
-                        Check(checkingPiecePosition = Position.parse("g9"), checkedKingPosition = Position.parse("m9"))
+                        Check(checkingPieceCoordinates = Coordinates.parse("g9"), checkedKingCoordinates = Coordinates.parse("m9"))
                 )
         )
     }
@@ -894,9 +896,9 @@ class MoveMakeTest : Spek({
         """.trimIndent())
 
         engine.submitResignation(Red)
-        val newState = engine.state
+        val newState = engine.getUIState()
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             Y-1,1,0,0-0,0,0,0-0,0,0,0-0,0,0,0-0-
             14/
             14/
@@ -935,9 +937,9 @@ class MoveMakeTest : Spek({
         """.trimIndent())
 
         engine.submitResignation(Red)
-        val newState = engine.state
+        val newState = engine.getUIState()
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             Y-1,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
             14/
             14/
@@ -954,7 +956,7 @@ class MoveMakeTest : Spek({
             14/
             14
         """.trimIndent())
-        engine.winningColor shouldBeEqualTo Yellow
+        newState.winningColor shouldBeEqualTo Yellow
     }
 
     test("resign not on move when 1v1") {
@@ -977,9 +979,9 @@ class MoveMakeTest : Spek({
         """.trimIndent())
 
         engine.submitResignation(Red)
-        val newState = engine.state
+        val newState = engine.getUIState()
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             Y-1,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
             14/
             14/
@@ -996,7 +998,7 @@ class MoveMakeTest : Spek({
             14/
             14
         """.trimIndent())
-        engine.winningColor shouldBeEqualTo Yellow
+        newState.winningColor shouldBeEqualTo Yellow
     }
 
     test("resign not on move") {
@@ -1019,9 +1021,9 @@ class MoveMakeTest : Spek({
         """.trimIndent())
 
         engine.submitResignation(Red)
-        val newState = engine.state
+        val newState = engine.getUIState()
 
-        newState shouldBeEqualTo parseStateFromFenOrThrow("""
+        newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
             Y-1,1,0,0-0,0,0,0-0,0,0,0-0,0,0,0-0-
             14/
             14/
@@ -1059,9 +1061,10 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove("i6", "i7")
+        val state = engine.getStateAfterMove("i6", "i7")
 
-        engine.isDraw shouldBeEqualTo true
+        state.isGameOver shouldBeEqualTo true
+        state.winningColor shouldBeEqualTo null
     }
 
     test("draw when three kings only remained") {
@@ -1083,9 +1086,10 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove("i6", "i7")
+        val state = engine.getStateAfterMove("i6", "i7")
 
-        engine.isDraw shouldBeEqualTo true
+        state.isGameOver shouldBeEqualTo true
+        state.winningColor shouldBeEqualTo null
     }
 
     test("draw when two kings only remained") {
@@ -1107,9 +1111,10 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove("i6", "i7")
+        val state = engine.getStateAfterMove("i6", "i7")
 
-        engine.isDraw shouldBeEqualTo true
+        state.isGameOver shouldBeEqualTo true
+        state.winningColor shouldBeEqualTo null
     }
 
     test("draw when king vs king and knight remained") {
@@ -1131,9 +1136,10 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove("i6", "i7")
+        val state = engine.getStateAfterMove("i6", "i7")
 
-        engine.isDraw shouldBeEqualTo true
+        state.isGameOver shouldBeEqualTo true
+        state.winningColor shouldBeEqualTo null
     }
 
     test("draw when king vs king and bishop remained") {
@@ -1155,9 +1161,10 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove("i6", "i7")
+        val state = engine.getStateAfterMove("i6", "i7")
 
-        engine.isDraw shouldBeEqualTo true
+        state.isGameOver shouldBeEqualTo true
+        state.winningColor shouldBeEqualTo null
     }
 
     test("draw when king and bishop vs king and bishop remained and bishops have same type") {
@@ -1179,9 +1186,10 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove("i6", "i7")
+        val state = engine.getStateAfterMove("i6", "i7")
 
-        engine.isDraw shouldBeEqualTo true
+        state.isGameOver shouldBeEqualTo true
+        state.winningColor shouldBeEqualTo null
     }
 
     test("not a draw when king and bishop vs king and bishop remained but bishops do not have same type") {
@@ -1203,8 +1211,8 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove("i6", "i7")
+        val state = engine.getStateAfterMove("i6", "i7")
 
-        engine.isDraw shouldBeEqualTo false
+        state.isGameOver shouldBeEqualTo false
     }
 })

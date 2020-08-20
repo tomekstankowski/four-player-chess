@@ -336,8 +336,6 @@ class GameControlTest : Spek({
                             legalMoves = listOf(
                                     LegalMoveDto("d2", "d3"),
                                     LegalMoveDto("d2", "d4"),
-                                    LegalMoveDto("e1", "f3"),
-                                    LegalMoveDto("e1", "d3"),
                                     LegalMoveDto("e2", "e3"),
                                     LegalMoveDto("e2", "e4"),
                                     LegalMoveDto("f2", "f3"),
@@ -348,12 +346,15 @@ class GameControlTest : Spek({
                                     LegalMoveDto("h2", "h4"),
                                     LegalMoveDto("i2", "i3"),
                                     LegalMoveDto("i2", "i4"),
-                                    LegalMoveDto("j1", "k3"),
-                                    LegalMoveDto("j1", "i3"),
                                     LegalMoveDto("j2", "j3"),
                                     LegalMoveDto("j2", "j4"),
                                     LegalMoveDto("k2", "k3"),
-                                    LegalMoveDto("k2", "k4")
+                                    LegalMoveDto("k2", "k4"),
+                                    LegalMoveDto("e1", "f3"),
+                                    LegalMoveDto("e1", "d3"),
+                                    LegalMoveDto("j1", "k3"),
+                                    LegalMoveDto("j1", "i3")
+
                             ),
                             isDrawByClaimAllowed = false,
                             isFinished = false,
@@ -541,10 +542,6 @@ class GameControlTest : Spek({
                             nextMoveColor = "blue",
                             colorsInCheck = emptyList(),
                             legalMoves = listOf(
-                                    LegalMoveDto("a5", "c6"),
-                                    LegalMoveDto("a5", "c4"),
-                                    LegalMoveDto("a10", "c11"),
-                                    LegalMoveDto("a10", "c9"),
                                     LegalMoveDto("b4", "c4"),
                                     LegalMoveDto("b4", "d4"),
                                     LegalMoveDto("b5", "c5"),
@@ -560,7 +557,11 @@ class GameControlTest : Spek({
                                     LegalMoveDto("b10", "c10"),
                                     LegalMoveDto("b10", "d10"),
                                     LegalMoveDto("b11", "c11"),
-                                    LegalMoveDto("b11", "d11")
+                                    LegalMoveDto("b11", "d11"),
+                                    LegalMoveDto("a5", "c6"),
+                                    LegalMoveDto("a5", "c4"),
+                                    LegalMoveDto("a10", "c11"),
+                                    LegalMoveDto("a10", "c9")
                             ),
                             isDrawByClaimAllowed = false,
                             isFinished = false,
@@ -681,10 +682,6 @@ class GameControlTest : Spek({
                             nextMoveColor = "blue",
                             colorsInCheck = emptyList(),
                             legalMoves = listOf(
-                                    LegalMoveDto("a5", "c6"),
-                                    LegalMoveDto("a5", "c4"),
-                                    LegalMoveDto("a10", "c11"),
-                                    LegalMoveDto("a10", "c9"),
                                     LegalMoveDto("b4", "c4"),
                                     LegalMoveDto("b4", "d4"),
                                     LegalMoveDto("b5", "c5"),
@@ -700,7 +697,11 @@ class GameControlTest : Spek({
                                     LegalMoveDto("b10", "c10"),
                                     LegalMoveDto("b10", "d10"),
                                     LegalMoveDto("b11", "c11"),
-                                    LegalMoveDto("b11", "d11")
+                                    LegalMoveDto("b11", "d11"),
+                                    LegalMoveDto("a5", "c6"),
+                                    LegalMoveDto("a5", "c4"),
+                                    LegalMoveDto("a10", "c11"),
+                                    LegalMoveDto("a10", "c9")
                             ),
                             isDrawByClaimAllowed = false,
                             isFinished = false,

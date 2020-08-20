@@ -34,8 +34,8 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g2"), to = Position.parse("g3")),
-                    Move(from = Position.parse("g2"), to = Position.parse("g4"))
+                    RegularMove(from = Coordinates.parse("g2"), to = Coordinates.parse("g3")),
+                    RegularMove(from = Coordinates.parse("g2"), to = Coordinates.parse("g4"))
             )
         }
 
@@ -87,7 +87,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g2"), to = Position.parse("g3"))
+                    RegularMove(from = Coordinates.parse("g2"), to = Coordinates.parse("g3"))
             )
         }
 
@@ -139,7 +139,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g2"), to = Position.parse("g3"))
+                    RegularMove(from = Coordinates.parse("g2"), to = Coordinates.parse("g3"))
             )
         }
 
@@ -166,7 +166,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g3"), to = Position.parse("g4"))
+                    RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("g4"))
             )
         }
 
@@ -243,8 +243,8 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g3"), to = Position.parse("g4")),
-                    Move(from = Position.parse("g3"), to = Position.parse("h4"))
+                    RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("g4")),
+                    RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("h4"))
             )
         }
 
@@ -271,8 +271,8 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g3"), to = Position.parse("g4")),
-                    Move(from = Position.parse("g3"), to = Position.parse("f4"))
+                    RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("g4")),
+                    RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("f4"))
             )
         }
 
@@ -299,9 +299,9 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g3"), to = Position.parse("g4")),
-                    Move(from = Position.parse("g3"), to = Position.parse("f4")),
-                    Move(from = Position.parse("g3"), to = Position.parse("h4"))
+                    RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("g4")),
+                    RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("f4")),
+                    RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("h4"))
             )
         }
 
@@ -328,7 +328,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("k3"), to = Position.parse("l4"))
+                    RegularMove(from = Coordinates.parse("k3"), to = Coordinates.parse("l4"))
             )
         }
 
@@ -355,7 +355,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("d3"), to = Position.parse("c4"))
+                    RegularMove(from = Coordinates.parse("d3"), to = Coordinates.parse("c4"))
             )
         }
 
@@ -382,7 +382,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g4"), to = Position.parse("g5"))
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("g5"))
             )
         }
 
@@ -409,7 +409,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g4"), to = Position.parse("h5"))
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("h5"))
             )
         }
 
@@ -464,22 +464,22 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("i4"), to = Position.parse("j5")),
-                    Move(from = Position.parse("i4"), to = Position.parse("k6")),
-                    Move(from = Position.parse("i4"), to = Position.parse("l7")),
-                    Move(from = Position.parse("i4"), to = Position.parse("m8")),
-                    Move(from = Position.parse("i4"), to = Position.parse("n9")),
-                    Move(from = Position.parse("i4"), to = Position.parse("h5")),
-                    Move(from = Position.parse("i4"), to = Position.parse("g6")),
-                    Move(from = Position.parse("i4"), to = Position.parse("f7")),
-                    Move(from = Position.parse("i4"), to = Position.parse("e8")),
-                    Move(from = Position.parse("i4"), to = Position.parse("d9")),
-                    Move(from = Position.parse("i4"), to = Position.parse("c10")),
-                    Move(from = Position.parse("i4"), to = Position.parse("b11")),
-                    Move(from = Position.parse("i4"), to = Position.parse("h3")),
-                    Move(from = Position.parse("i4"), to = Position.parse("g2")),
-                    Move(from = Position.parse("i4"), to = Position.parse("f1")),
-                    Move(from = Position.parse("i4"), to = Position.parse("j3"))
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("j5")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("k6")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("l7")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("m8")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("n9")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("h5")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("g6")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("f7")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("e8")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("d9")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("c10")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("b11")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("h3")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("g2")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("f1")),
+                    RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("j3"))
             )
         }
 
@@ -531,9 +531,9 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g4"), to = Position.parse("f5")),
-                    Move(from = Position.parse("g4"), to = Position.parse("e6")),
-                    Move(from = Position.parse("g4"), to = Position.parse("d7"))
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("f5")),
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("e6")),
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("d7"))
             )
         }
 
@@ -560,7 +560,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g4"), to = Position.parse("h5"))
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("h5"))
             )
         }
 
@@ -615,11 +615,11 @@ class MoveGenerationTest : Spek({
             val moves = engine.legalMoves
 
             moves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("f3"), to = Position.parse("g5")),
-                    Move(from = Position.parse("f3"), to = Position.parse("h4")),
-                    Move(from = Position.parse("f3"), to = Position.parse("e1")),
-                    Move(from = Position.parse("f3"), to = Position.parse("d4")),
-                    Move(from = Position.parse("f3"), to = Position.parse("e5"))
+                    RegularMove(from = Coordinates.parse("f3"), to = Coordinates.parse("g5")),
+                    RegularMove(from = Coordinates.parse("f3"), to = Coordinates.parse("h4")),
+                    RegularMove(from = Coordinates.parse("f3"), to = Coordinates.parse("e1")),
+                    RegularMove(from = Coordinates.parse("f3"), to = Coordinates.parse("d4")),
+                    RegularMove(from = Coordinates.parse("f3"), to = Coordinates.parse("e5"))
             )
         }
 
@@ -671,7 +671,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g4"), to = Position.parse("i5"))
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("i5"))
             )
         }
 
@@ -726,30 +726,30 @@ class MoveGenerationTest : Spek({
             val moves = engine.legalMoves
 
             moves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("d4"), to = Position.parse("d5")),
-                    Move(from = Position.parse("d4"), to = Position.parse("d6")),
-                    Move(from = Position.parse("d4"), to = Position.parse("d7")),
-                    Move(from = Position.parse("d4"), to = Position.parse("d8")),
-                    Move(from = Position.parse("d4"), to = Position.parse("d9")),
-                    Move(from = Position.parse("d4"), to = Position.parse("d10")),
-                    Move(from = Position.parse("d4"), to = Position.parse("d11")),
-                    Move(from = Position.parse("d4"), to = Position.parse("d12")),
-                    Move(from = Position.parse("d4"), to = Position.parse("d13")),
-                    Move(from = Position.parse("d4"), to = Position.parse("e4")),
-                    Move(from = Position.parse("d4"), to = Position.parse("f4")),
-                    Move(from = Position.parse("d4"), to = Position.parse("g4")),
-                    Move(from = Position.parse("d4"), to = Position.parse("h4")),
-                    Move(from = Position.parse("d4"), to = Position.parse("i4")),
-                    Move(from = Position.parse("d4"), to = Position.parse("j4")),
-                    Move(from = Position.parse("d4"), to = Position.parse("k4")),
-                    Move(from = Position.parse("d4"), to = Position.parse("l4")),
-                    Move(from = Position.parse("d4"), to = Position.parse("d3")),
-                    Move(from = Position.parse("d4"), to = Position.parse("d2")),
-                    Move(from = Position.parse("d4"), to = Position.parse("d1")),
-                    Move(from = Position.parse("d4"), to = Position.parse("c4")),
-                    Move(from = Position.parse("d4"), to = Position.parse("b4")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d5")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d6")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d7")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d8")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d9")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d10")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d11")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d12")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d13")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("e4")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("f4")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("g4")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("h4")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("i4")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("j4")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("k4")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("l4")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d3")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d2")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d1")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("c4")),
+                    RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("b4")),
 
-                    Move(from = Position.parse("k1"), to = Position.parse("j1"))
+                    RegularMove(from = Coordinates.parse("k1"), to = Coordinates.parse("j1"))
 
             )
         }
@@ -802,9 +802,9 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g3"), to = Position.parse("f3")),
-                    Move(from = Position.parse("g3"), to = Position.parse("e3")),
-                    Move(from = Position.parse("g3"), to = Position.parse("d3"))
+                    RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("f3")),
+                    RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("e3")),
+                    RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("d3"))
             )
         }
 
@@ -831,7 +831,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g4"), to = Position.parse("i4"))
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("i4"))
             )
         }
 
@@ -886,47 +886,47 @@ class MoveGenerationTest : Spek({
             val moves = engine.legalMoves
 
             moves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("j6"), to = Position.parse("j7")),
-                    Move(from = Position.parse("j6"), to = Position.parse("j8")),
-                    Move(from = Position.parse("j6"), to = Position.parse("j9")),
-                    Move(from = Position.parse("j6"), to = Position.parse("j10")),
-                    Move(from = Position.parse("j6"), to = Position.parse("j11")),
-                    Move(from = Position.parse("j6"), to = Position.parse("j12")),
-                    Move(from = Position.parse("j6"), to = Position.parse("j13")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("j7")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("j8")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("j9")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("j10")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("j11")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("j12")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("j13")),
 
-                    Move(from = Position.parse("j6"), to = Position.parse("k7")),
-                    Move(from = Position.parse("j6"), to = Position.parse("l8")),
-                    Move(from = Position.parse("j6"), to = Position.parse("m9")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("k7")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("l8")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("m9")),
 
-                    Move(from = Position.parse("j6"), to = Position.parse("k6")),
-                    Move(from = Position.parse("j6"), to = Position.parse("l6")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("k6")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("l6")),
 
-                    Move(from = Position.parse("j6"), to = Position.parse("k5")),
-                    Move(from = Position.parse("j6"), to = Position.parse("l4")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("k5")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("l4")),
 
-                    Move(from = Position.parse("j6"), to = Position.parse("j5")),
-                    Move(from = Position.parse("j6"), to = Position.parse("j4")),
-                    Move(from = Position.parse("j6"), to = Position.parse("j3")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("j5")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("j4")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("j3")),
 
-                    Move(from = Position.parse("j6"), to = Position.parse("i5")),
-                    Move(from = Position.parse("j6"), to = Position.parse("h4")),
-                    Move(from = Position.parse("j6"), to = Position.parse("g3")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("i5")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("h4")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("g3")),
 
-                    Move(from = Position.parse("j6"), to = Position.parse("i6")),
-                    Move(from = Position.parse("j6"), to = Position.parse("h6")),
-                    Move(from = Position.parse("j6"), to = Position.parse("g6")),
-                    Move(from = Position.parse("j6"), to = Position.parse("f6")),
-                    Move(from = Position.parse("j6"), to = Position.parse("e6")),
-                    Move(from = Position.parse("j6"), to = Position.parse("d6")),
-                    Move(from = Position.parse("j6"), to = Position.parse("c6")),
-                    Move(from = Position.parse("j6"), to = Position.parse("b6")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("i6")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("h6")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("g6")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("f6")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("e6")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("d6")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("c6")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("b6")),
 
-                    Move(from = Position.parse("j6"), to = Position.parse("i7")),
-                    Move(from = Position.parse("j6"), to = Position.parse("h8")),
-                    Move(from = Position.parse("j6"), to = Position.parse("g9")),
-                    Move(from = Position.parse("j6"), to = Position.parse("f10")),
-                    Move(from = Position.parse("j6"), to = Position.parse("e11")),
-                    Move(from = Position.parse("j6"), to = Position.parse("d12"))
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("i7")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("h8")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("g9")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("f10")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("e11")),
+                    RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("d12"))
             )
         }
 
@@ -953,11 +953,11 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g4"), to = Position.parse("g5")),
-                    Move(from = Position.parse("g4"), to = Position.parse("g6")),
-                    Move(from = Position.parse("g4"), to = Position.parse("g7")),
-                    Move(from = Position.parse("g4"), to = Position.parse("g8")),
-                    Move(from = Position.parse("g4"), to = Position.parse("g9"))
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("g5")),
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("g6")),
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("g7")),
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("g8")),
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("g9"))
             )
         }
 
@@ -984,7 +984,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("g4"), to = Position.parse("i4"))
+                    RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("i4"))
             )
         }
 
@@ -1039,14 +1039,14 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("e2"), to = Position.parse("e3")),
-                    Move(from = Position.parse("e2"), to = Position.parse("f3")),
-                    Move(from = Position.parse("e2"), to = Position.parse("f2")),
-                    Move(from = Position.parse("e2"), to = Position.parse("f1")),
-                    Move(from = Position.parse("e2"), to = Position.parse("e1")),
-                    Move(from = Position.parse("e2"), to = Position.parse("d1")),
-                    Move(from = Position.parse("e2"), to = Position.parse("d2")),
-                    Move(from = Position.parse("e2"), to = Position.parse("d3"))
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("e3")),
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("f3")),
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("f2")),
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("f1")),
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("e1")),
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("d1")),
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("d2")),
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("d3"))
             )
         }
 
@@ -1073,12 +1073,12 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("e2"), to = Position.parse("e3")),
-                    Move(from = Position.parse("e2"), to = Position.parse("f3")),
-                    Move(from = Position.parse("e2"), to = Position.parse("f1")),
-                    Move(from = Position.parse("e2"), to = Position.parse("d1")),
-                    Move(from = Position.parse("e2"), to = Position.parse("d2")),
-                    Move(from = Position.parse("e2"), to = Position.parse("d3"))
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("e3")),
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("f3")),
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("f1")),
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("d1")),
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("d2")),
+                    RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("d3"))
             )
         }
 
@@ -1105,8 +1105,8 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("h1"), to = Position.parse("i1")),
-                    Move(from = Position.parse("h1"), to = Position.parse("g1"))
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("i1")),
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("g1"))
             )
         }
 
@@ -1158,7 +1158,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("h1"), to = Position.parse("i1"))
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("i1"))
             )
         }
 
@@ -1210,7 +1210,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("h1"), to = Position.parse("g1"))
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("g1"))
             )
         }
 
@@ -1237,8 +1237,8 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("h1"), to = Position.parse("f1")),
-                    Move(from = Position.parse("h1"), to = Position.parse("g1"))
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("f1")),
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("g1"))
             )
         }
 
@@ -1265,7 +1265,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("h1"), to = Position.parse("g1"))
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("g1"))
             )
         }
 
@@ -1292,8 +1292,8 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("h1"), to = Position.parse("i1")),
-                    Move(from = Position.parse("h1"), to = Position.parse("g1"))
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("i1")),
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("g1"))
             )
         }
 
@@ -1320,7 +1320,7 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("h1"), to = Position.parse("i1"))
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("i1"))
             )
         }
 
@@ -1347,8 +1347,8 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("h1"), to = Position.parse("j1")),
-                    Move(from = Position.parse("h1"), to = Position.parse("i1"))
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("j1")),
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("i1"))
             )
         }
 
@@ -1375,9 +1375,9 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("h1"), to = Position.parse("f1")),
-                    Move(from = Position.parse("h1"), to = Position.parse("h2")),
-                    Move(from = Position.parse("h1"), to = Position.parse("g1"))
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("f1")),
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("h2")),
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("g1"))
             )
         }
 
@@ -1404,10 +1404,10 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("h1"), to = Position.parse("j1")),
-                    Move(from = Position.parse("h1"), to = Position.parse("f1")),
-                    Move(from = Position.parse("h1"), to = Position.parse("i1")),
-                    Move(from = Position.parse("h1"), to = Position.parse("g1"))
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("j1")),
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("f1")),
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("i1")),
+                    RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("g1"))
 
             )
         }
@@ -1435,14 +1435,14 @@ class MoveGenerationTest : Spek({
             val validMoves = engine.legalMoves
 
             validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
-                    Move(from = Position.parse("k5"), to = Position.parse("k6")),
-                    Move(from = Position.parse("k5"), to = Position.parse("l6")),
-                    Move(from = Position.parse("k5"), to = Position.parse("l5")),
-                    Move(from = Position.parse("k5"), to = Position.parse("l4")),
-                    Move(from = Position.parse("k5"), to = Position.parse("k4")),
-                    Move(from = Position.parse("k5"), to = Position.parse("j4")),
-                    Move(from = Position.parse("k5"), to = Position.parse("j5")),
-                    Move(from = Position.parse("k5"), to = Position.parse("j6"))
+                    RegularMove(from = Coordinates.parse("k5"), to = Coordinates.parse("k6")),
+                    RegularMove(from = Coordinates.parse("k5"), to = Coordinates.parse("l6")),
+                    RegularMove(from = Coordinates.parse("k5"), to = Coordinates.parse("l5")),
+                    RegularMove(from = Coordinates.parse("k5"), to = Coordinates.parse("l4")),
+                    RegularMove(from = Coordinates.parse("k5"), to = Coordinates.parse("k4")),
+                    RegularMove(from = Coordinates.parse("k5"), to = Coordinates.parse("j4")),
+                    RegularMove(from = Coordinates.parse("k5"), to = Coordinates.parse("j5")),
+                    RegularMove(from = Coordinates.parse("k5"), to = Coordinates.parse("j6"))
             )
         }
 
@@ -1468,17 +1468,17 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Queen) shouldNotContain Move(
-                    from = Position.parse("h10"), to = Position.parse("h1")
+            validMoves.filterByMovedPieceType(state, Queen) shouldNotContain RegularMove(
+                    from = Coordinates.parse("h10"), to = Coordinates.parse("h1")
             )
-            validMoves.filterByMovedPieceType(state, Queen) shouldContain Move(
-                    from = Position.parse("h10"), to = Position.parse("h2")
+            validMoves.filterByMovedPieceType(state, Queen) shouldContain RegularMove(
+                    from = Coordinates.parse("h10"), to = Coordinates.parse("h2")
             )
         }
     }
 })
 
-private fun List<Move>.filterByMovedPieceType(state: State, pieceType: PieceType): List<Move> =
+private fun List<Move>.filterByMovedPieceType(state: FenState, pieceType: PieceType): List<Move> =
         filter { move ->
-            (state.squares.byPosition(move.from) as? Square.Occupied)?.piece?.type == pieceType
+            (state.board.byCoordinates(move.from) as? Square.Occupied)?.piece?.type == pieceType
         }

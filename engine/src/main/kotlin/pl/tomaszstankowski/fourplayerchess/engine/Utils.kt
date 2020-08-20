@@ -1,8 +1,6 @@
 package pl.tomaszstankowski.fourplayerchess.engine
 
 import pl.tomaszstankowski.fourplayerchess.engine.Color.*
-import pl.tomaszstankowski.fourplayerchess.engine.PieceType.King
-import pl.tomaszstankowski.fourplayerchess.engine.PieceType.Pawn
 import kotlin.math.max
 import kotlin.math.min
 
@@ -79,25 +77,15 @@ internal val Color.queenSideVector: Vector
         Yellow -> rightV
     }
 
-internal fun Move.isKingSideCastling(state: State): Boolean {
-    val square = state.squares.byPosition(from)
-    val movedPieceType = (square as Square.Occupied).piece.type
-    return movedPieceType == King && from.offsetOrNull(state.nextMoveColor.kingSideVector, 2) == to
-}
+internal val Color.defaultKingCoordinates: Coordinates
+    get() = when (this) {
+        Red -> Coordinates.ofFileAndRank(7, 0)
+        Blue -> Coordinates.ofFileAndRank(0, 7)
+        Yellow -> Coordinates.ofFileAndRank(6, 13)
+        Green -> Coordinates.ofFileAndRank(13, 6)
+    }
 
-internal fun Move.isCaptureByEnPassant(state: State): Boolean {
-    val srcSquare = state.squares.byPosition(from)
-    val movedPieceType = (srcSquare as Square.Occupied).piece.type
-    return movedPieceType == Pawn && state.enPassantSquares.containsValue(to)
-}
-
-internal fun Move.isQueenSideCastling(state: State): Boolean {
-    val srcSquare = state.squares.byPosition(from)
-    val movedPieceType = (srcSquare as Square.Occupied).piece.type
-    return movedPieceType == King && from.offsetOrNull(state.nextMoveColor.queenSideVector, 2) == to
-}
-
-internal fun Position.isPawnPromotionPositionForColor(color: Color) =
+internal fun Coordinates.isPromotionSquareForColor(color: Color) =
         when (color) {
             Red -> rank == PAWN_PROMOTION_RANK - 1
             Blue -> file == PAWN_PROMOTION_RANK - 1
@@ -105,10 +93,10 @@ internal fun Position.isPawnPromotionPositionForColor(color: Color) =
             Green -> file == BOARD_SIZE - PAWN_PROMOTION_RANK
         }
 
-internal fun Position.isAdjacentTo(other: Position) =
+internal fun Coordinates.isAdjacentTo(other: Coordinates) =
         allDirectionsVectors.any { vector -> this.offsetOrNull(vector) == other }
 
-internal fun Position.isOnLineBetween(a: Position, b: Position): Boolean {
+internal fun Coordinates.isOnLineBetween(a: Coordinates, b: Coordinates): Boolean {
     if (a.file == b.file)
         return file == a.file && rank > min(a.rank, b.rank) && rank < max(a.rank, b.rank)
     if (a.rank == b.rank)
@@ -118,7 +106,10 @@ internal fun Position.isOnLineBetween(a: Position, b: Position): Boolean {
             && file > min(a.file, b.file) && file < max(a.file, b.file)
 }
 
-internal fun Position.isPawnStartingPositionForColor(color: Color) =
+internal val Coordinates.isLightSquare: Boolean
+    get() = (file + rank) % 2 == 0
+
+internal fun Coordinates.isOnPawnStartingRowForColor(color: Color) =
         when (color) {
             Red -> rank == 1
             Green -> file == BOARD_SIZE - 2
@@ -126,26 +117,61 @@ internal fun Position.isPawnStartingPositionForColor(color: Color) =
             Yellow -> rank == BOARD_SIZE - 2
         }
 
-internal fun Move.isPawnPromotion(state: State): Boolean {
-    return this.isPawnAdvance(state) && to.isPawnPromotionPositionForColor(state.nextMoveColor)
+internal fun getRookCoordinatesBeforeCastling(color: Color, castling: Castling): Coordinates =
+        when (castling) {
+            Castling.KingSide -> color.defaultKingCoordinates.offset(color.kingSideVector, 3)
+            Castling.QueenSide -> color.defaultKingCoordinates.offset(color.queenSideVector, 4)
+        }
+
+internal fun getRookCoordinatesAfterCastling(color: Color, castling: Castling): Coordinates =
+        when (castling) {
+            Castling.KingSide -> color.defaultKingCoordinates.offset(color.kingSideVector, 1)
+            Castling.QueenSide -> color.defaultKingCoordinates.offset(color.queenSideVector, 1)
+        }
+
+internal fun Int.countSetBits(): Int {
+    var count = 0
+    var n = this
+    while (n > 0) {
+        count += n and 1
+        n = n shr 1
+    }
+    return count
 }
 
-internal fun Move.isRegularCapture(state: State): Boolean {
-    val targetSquare = state.squares.byPosition(to)
-    return targetSquare is Square.Occupied
-            && targetSquare.piece.color != state.nextMoveColor
-}
-
-internal fun Move.isPawnAdvance(state: State): Boolean {
-    val srcSquare = state.squares.byPosition(from)
-    val movedPieceType = (srcSquare as Square.Occupied).piece.type
-    return movedPieceType == Pawn
-}
-
-internal fun squareOf(color: Color, pieceType: PieceType) =
-        Square.Occupied.by(color, pieceType)
-
-internal fun emptySquare() = Square.Empty
-
-internal val Position.isLightSquare: Boolean
-    get() = (file + rank) % 2 == 0
+internal fun Int.indexOfSingleSetBit(): Int =
+        when (this) {
+            0x01 -> 0
+            0x02 -> 1
+            0x04 -> 2
+            0x08 -> 3
+            0x10 -> 4
+            0x20 -> 5
+            0x40 -> 6
+            0x80 -> 7
+            0x0100 -> 8
+            0x0200 -> 9
+            0x0400 -> 10
+            0x0800 -> 11
+            0x1000 -> 12
+            0x2000 -> 13
+            0x4000 -> 14
+            0x8000 -> 15
+            0x010000 -> 16
+            0x020000 -> 17
+            0x040000 -> 18
+            0x080000 -> 19
+            0x100000 -> 20
+            0x200000 -> 21
+            0x400000 -> 22
+            0x800000 -> 23
+            0x01000000 -> 24
+            0x02000000 -> 25
+            0x04000000 -> 26
+            0x08000000 -> 27
+            0x10000000 -> 28
+            0x20000000 -> 29
+            0x40000000 -> 30
+            -0x80000000 -> 31
+            else -> -1
+        }

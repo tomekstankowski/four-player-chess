@@ -29,14 +29,14 @@ class ParseStateFromFenTest : Spek({
             3,rR,rN,rB,rQ,rK,rB,rN,rR,3
         """.trimIndent()
 
-        val result = State.parseFromFen(input)
+        val result = FenState.parseFromFen(input)
 
-        result shouldBeEqualTo ParseStateFromFenResult.Parsed(State.starting())
+        result shouldBeEqualTo ParseStateFromFenResult.Parsed(FenState.starting())
     }
 
     test("parses in game position") {
         val input = """
-            B-0,0,0,0-0,1,1,1-0,1,1,1-0,0,0,g12-9-
+            B-0,0,0,0-0,1,1,1-0,1,1,1-0,0,g12,0-9-
             3,yR,yN,yB,yK,yQ,yB,1,yR,3/
             3,yP,yP,yP,1,yP,yP,yP,yP,3/
             8,yN,5/
@@ -53,40 +53,36 @@ class ParseStateFromFenTest : Spek({
             3,rR,rN,rB,rQ,1,rK,rN,rR,3
         """.trimIndent()
 
-        val result = State.parseFromFen(input)
+        val result = FenState.parseFromFen(input)
 
         result shouldBeEqualTo ParseStateFromFenResult.Parsed(
-                State(
-                        squares = listOf(
-                                listOf(null, null, null, squareOf(Red, Rook), squareOf(Red, Knight), squareOf(Red, Bishop), squareOf(Red, Queen), emptySquare(), squareOf(Red, King), squareOf(Red, Knight), squareOf(Red, Rook), null, null, null),
-                                listOf(null, null, null, squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Bishop), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), null, null, null),
-                                listOf(null, null, null, emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Red, Pawn), emptySquare(), emptySquare(), emptySquare(), null, null, null),
-                                listOf(squareOf(Blue, Rook), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Rook)),
-                                listOf(squareOf(Blue, Knight), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), emptySquare()),
-                                listOf(squareOf(Blue, Bishop), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Knight), squareOf(Green, Pawn), squareOf(Green, Bishop)),
-                                listOf(squareOf(Blue, Queen), emptySquare(), emptySquare(), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, King)),
-                                listOf(squareOf(Blue, King), emptySquare(), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Queen)),
-                                listOf(squareOf(Blue, Bishop), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Bishop)),
-                                listOf(squareOf(Blue, Knight), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), emptySquare(), squareOf(Green, Knight)),
-                                listOf(squareOf(Blue, Rook), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Yellow, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Rook)),
-                                listOf(null, null, null, emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Yellow, Knight), emptySquare(), emptySquare(), null, null, null),
-                                listOf(null, null, null, squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), emptySquare(), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), null, null, null),
-                                listOf(null, null, null, squareOf(Yellow, Rook), squareOf(Yellow, Knight), squareOf(Yellow, Bishop), squareOf(Yellow, King), squareOf(Yellow, Queen), squareOf(Yellow, Bishop), emptySquare(), squareOf(Yellow, Rook), null, null, null)
+                FenState(
+                        board = arrayOf<Row>(
+                                arrayOf(null, null, null, squareOf(Red, Rook), squareOf(Red, Knight), squareOf(Red, Bishop), squareOf(Red, Queen), emptySquare(), squareOf(Red, King), squareOf(Red, Knight), squareOf(Red, Rook), null, null, null),
+                                arrayOf(null, null, null, squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Bishop), squareOf(Red, Pawn), squareOf(Red, Pawn), squareOf(Red, Pawn), null, null, null),
+                                arrayOf(null, null, null, emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Red, Pawn), emptySquare(), emptySquare(), emptySquare(), null, null, null),
+                                arrayOf(squareOf(Blue, Rook), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Rook)),
+                                arrayOf(squareOf(Blue, Knight), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), emptySquare()),
+                                arrayOf(squareOf(Blue, Bishop), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Knight), squareOf(Green, Pawn), squareOf(Green, Bishop)),
+                                arrayOf(squareOf(Blue, Queen), emptySquare(), emptySquare(), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, King)),
+                                arrayOf(squareOf(Blue, King), emptySquare(), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Queen)),
+                                arrayOf(squareOf(Blue, Bishop), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Bishop)),
+                                arrayOf(squareOf(Blue, Knight), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), emptySquare(), squareOf(Green, Knight)),
+                                arrayOf(squareOf(Blue, Rook), squareOf(Blue, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Yellow, Pawn), emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Green, Pawn), squareOf(Green, Rook)),
+                                arrayOf(null, null, null, emptySquare(), emptySquare(), emptySquare(), emptySquare(), emptySquare(), squareOf(Yellow, Knight), emptySquare(), emptySquare(), null, null, null),
+                                arrayOf(null, null, null, squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), emptySquare(), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), squareOf(Yellow, Pawn), null, null, null),
+                                arrayOf(null, null, null, squareOf(Yellow, Rook), squareOf(Yellow, Knight), squareOf(Yellow, Bishop), squareOf(Yellow, King), squareOf(Yellow, Queen), squareOf(Yellow, Bishop), emptySquare(), squareOf(Yellow, Rook), null, null, null)
                         ),
                         eliminatedColors = emptySet(),
                         nextMoveColor = Blue,
-                        enPassantSquares = mapOf(
-                                Yellow to Position.ofFileAndRank(6, 11)
+                        enPassantSquares = mapOf(Yellow to Coordinates.parse("g12")),
+                        castlingOptions = mapOf(
+                                Red to emptySet(),
+                                Green to setOf(KingSide, QueenSide),
+                                Blue to setOf(KingSide, QueenSide),
+                                Yellow to setOf(KingSide, QueenSide)
                         ),
-                        castlingOptions = CastlingOptions(
-                                mapOf(
-                                        Red to emptySet(),
-                                        Green to setOf(KingSide, QueenSide),
-                                        Blue to setOf(KingSide, QueenSide),
-                                        Yellow to setOf(KingSide, QueenSide)
-                                )
-                        ),
-                        plyCount = PlyCount.of(9)
+                        plyCount = 9
                 )
         )
     }
@@ -110,7 +106,7 @@ class ParseStateFromFenTest : Spek({
             3,rR,rN,rB,rQ,rK,rB,rN,rR,3
         """.trimIndent()
 
-        val result = State.parseFromFen(input)
+        val result = FenState.parseFromFen(input)
 
         result shouldBeEqualTo ParseStateFromFenResult.IllegalState.IllegalRowLength(15)
     }
@@ -134,7 +130,7 @@ class ParseStateFromFenTest : Spek({
             3,rR,rN,rB,rQ,rK,rB,rN,rR,3
         """.trimIndent()
 
-        val result = State.parseFromFen(input)
+        val result = FenState.parseFromFen(input)
 
         result shouldBeEqualTo ParseStateFromFenResult.IllegalState.IllegalKingCount(
                 color = Yellow,
@@ -161,7 +157,7 @@ class ParseStateFromFenTest : Spek({
             3,rR,rN,rB,rQ,rK,rB,rN,rR,3
         """.trimIndent()
 
-        val result = State.parseFromFen(input)
+        val result = FenState.parseFromFen(input)
 
         result shouldBeEqualTo ParseStateFromFenResult.IllegalState.PiecesWithoutKing(Yellow)
     }

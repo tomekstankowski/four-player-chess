@@ -8,13 +8,8 @@ import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.util.IdGenerator
 import org.springframework.util.JdkIdGenerator
 import org.springframework.util.SimpleIdGenerator
-import pl.tomaszstankowski.fourplayerchess.engine.Color
-import pl.tomaszstankowski.fourplayerchess.engine.Engine
-import pl.tomaszstankowski.fourplayerchess.engine.Move
-import pl.tomaszstankowski.fourplayerchess.engine.MoveClaim.PromotionMoveClaim
-import pl.tomaszstankowski.fourplayerchess.engine.MoveClaim.RegularMoveClaim
+import pl.tomaszstankowski.fourplayerchess.engine.*
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
-import pl.tomaszstankowski.fourplayerchess.engine.Position
 import pl.tomaszstankowski.fourplayerchess.game.Player.HumanPlayer
 import pl.tomaszstankowski.fourplayerchess.game.Player.RandomBot
 import pl.tomaszstankowski.fourplayerchess.game.data.*
@@ -139,8 +134,8 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
         gameRepository.update(updatedGame)
         val engine = Engine(random = random)
         engineInstanceStore.put(game.id, engine)
-        val engineState = engine.getStateSnapshot()
-        botMoveExecutor.executeBotMoveIfHasNextMove(randomBots, gameId, engineState)
+        val state = engine.getUIState()
+        botMoveExecutor.executeBotMoveIfHasNextMove(randomBots, gameId, state)
         return true
     }
 
@@ -167,9 +162,9 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
         if (!game.isActive) {
             return GetGameStateResult.GameNotActive
         }
-        val engineState = engineInstanceStore.synchronized(gameId) { engine -> engine.getStateSnapshot() }
+        val state = engineInstanceStore.synchronized(gameId) { engine -> engine.getUIState() }
                 ?: throw IllegalStateException()
-        val gameState = engineState.toGameStateDto()
+        val gameState = GameStateDto.of(state)
         return GetGameStateResult.Success(gameState)
     }
 
@@ -179,13 +174,13 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
         if (!game.isActive) {
             return MakeMoveResult.Error.GameNotActive
         }
-        val engineState = engineInstanceStore.synchronized(gameId) { engine -> engine.getStateSnapshot() }
+        val state = engineInstanceStore.synchronized(gameId) { engine -> engine.getUIState() }
                 ?: throw IllegalStateException()
         val humanPlayers = humanPlayerRepository.findByGameId(gameId)
         val randomBots = randomBotRepository.findByGameId(gameId)
         val requestingPlayer = humanPlayers.find { it.userId == dto.playerId }
                 ?: return MakeMoveResult.Error.PlayerIsNotInTheGame
-        val nextMoveColor = engineState.state.nextMoveColor
+        val nextMoveColor = state.fenState.nextMoveColor
         if (requestingPlayer.color != nextMoveColor) {
             return MakeMoveResult.Error.PlayerDoesNotHaveNextMove(
                     nextMoveColor = nextMoveColor.toJsonStr(),
@@ -193,36 +188,34 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
             )
         }
 
-        val from = Position.parseOrNull(dto.from) ?: return MakeMoveResult.Error.InvalidPosition(dto.from)
-        val to = Position.parseOrNull(dto.to) ?: return MakeMoveResult.Error.InvalidPosition(dto.to)
-        val move = Move(from = from, to = to)
+        val from = Coordinates.parseOrNull(dto.from) ?: return MakeMoveResult.Error.InvalidPosition(dto.from)
+        val to = Coordinates.parseOrNull(dto.to) ?: return MakeMoveResult.Error.InvalidPosition(dto.to)
 
-        val moveClaim = (
+        val move = (
                 if (dto.promotionPiece == null)
-                    RegularMoveClaim(move)
+                    RegularMove(from, to)
                 else
-                    dto.promotionPiece
-                            .toPieceTypeOrNull()
-                            ?.let { PromotionMoveClaim.getOrNull(move, it) }
+                    dto.promotionPiece.toPromotionPieceTypeOrNull()
+                            ?.let { Promotion(from, to, it) }
                 )
                 ?: return MakeMoveResult.Error.IllegalPromotionPiece(
                         legalPieces = setOf(Queen, Rook, Bishop, Knight)
                                 .map { it.toJsonStr() },
                         given = dto.promotionPiece!!
                 )
-        val (isMoveMade, newEngineState) = engineInstanceStore.synchronized(gameId) { engine ->
-            val isMoveMade = engine.makeMove(moveClaim)
-            isMoveMade to engine.getStateSnapshot()
+        val (isMoveMade, newState) = engineInstanceStore.synchronized(gameId) { engine ->
+            val isMoveMade = engine.makeMove(move)
+            isMoveMade to engine.getUIState()
         } ?: throw IllegalStateException()
         if (!isMoveMade) {
             return MakeMoveResult.Error.IllegalMove
         }
-        if (newEngineState.isGameOver) {
+        if (newState.isGameOver) {
             handleGameFinished(game)
         }
-        botMoveExecutor.executeBotMoveIfHasNextMove(randomBots, game.id, newEngineState)
-        val newGameStateDto = newEngineState.toGameStateDto()
-        gameMessageBroker.sendMoveMadeMessage(game.id, newGameStateDto, moveClaim.move.toDto())
+        botMoveExecutor.executeBotMoveIfHasNextMove(randomBots, game.id, newState)
+        val newGameStateDto = GameStateDto.of(newState)
+        gameMessageBroker.sendMoveMadeMessage(game.id, newGameStateDto, move.toDto())
         return MakeMoveResult.Success(newGameStateDto)
     }
 
@@ -236,19 +229,19 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
         val randomBots = randomBotRepository.findByGameId(gameId)
         val requestingPlayerColor = humanPlayers.firstOrNull { it.userId == dto.requestingPlayerId }?.color
                 ?: return SubmitResignationResult.Error.PlayerNotInTheGame
-        val (isResignationAllowed, engineState) = engineInstanceStore.synchronized(gameId) { engine ->
+        val (isResignationAllowed, state) = engineInstanceStore.synchronized(gameId) { engine ->
             val isResignationAllowed = engine.submitResignation(requestingPlayerColor)
-            isResignationAllowed to engine.getStateSnapshot()
+            isResignationAllowed to engine.getUIState()
         } ?: throw IllegalStateException()
         if (!isResignationAllowed) {
             return SubmitResignationResult.Error.NotAllowed
         }
-        if (engineState.isGameOver) {
+        if (state.isGameOver) {
             handleGameFinished(game)
         }
-        botMoveExecutor.executeBotMoveIfHasNextMove(randomBots, gameId, engineState)
+        botMoveExecutor.executeBotMoveIfHasNextMove(randomBots, gameId, state)
 
-        val newGameStateDto = engineState.toGameStateDto()
+        val newGameStateDto = GameStateDto.of(state)
         gameMessageBroker.sendResignationSubmittedMessage(gameId, newGameStateDto, requestingPlayerColor.toJsonStr())
         return SubmitResignationResult.Success(newGameStateDto, requestingPlayerColor.toJsonStr())
     }
@@ -262,16 +255,16 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
         val players = humanPlayerRepository.findByGameId(gameId)
         val requestingPlayerColor = players.firstOrNull { it.userId == dto.requestingPlayerId }?.color
                 ?: return ClaimDrawResult.Error.PlayerNotInTheGame
-        val (isDrawClaimed, engineState) = engineInstanceStore.synchronized(gameId) { engine ->
+        val (isDrawClaimed, state) = engineInstanceStore.synchronized(gameId) { engine ->
             val isDrawClaimed = engine.claimDraw()
-            isDrawClaimed to engine.getStateSnapshot()
+            isDrawClaimed to engine.getUIState()
         }
                 ?: throw IllegalStateException()
         if (!isDrawClaimed) {
             return ClaimDrawResult.Error.NotAllowed
         }
         handleGameFinished(game)
-        val newGameStateDto = engineState.toGameStateDto()
+        val newGameStateDto = GameStateDto.of(state)
         gameMessageBroker.sendDrawClaimedMessage(gameId, newGameStateDto, claimingColor = requestingPlayerColor.toJsonStr())
         return ClaimDrawResult.Success(newGameStateDto, claimingColor = requestingPlayerColor.toJsonStr())
     }

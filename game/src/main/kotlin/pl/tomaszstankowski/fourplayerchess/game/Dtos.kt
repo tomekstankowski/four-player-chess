@@ -61,26 +61,20 @@ data class GameStateDto(
 ) {
 
     companion object {
-        internal fun create(state: State,
-                            stateFeatures: StateFeatures,
-                            legalMoves: List<Move>,
-                            isDrawByClaimAllowed: Boolean,
-                            isFinished: Boolean,
-                            winningColor: Color?) =
+        internal fun of(uiState: UIState) =
                 GameStateDto(
-                        board = state.squares.map { row ->
+                        board = uiState.fenState.board.map { row ->
                             row.mapNotNull { squareOpt -> squareOpt?.toJsonStr() }
                         },
-                        eliminatedColors = state.eliminatedColors.map { color -> color.toJsonStr() },
-                        nextMoveColor = state.nextMoveColor.toJsonStr(),
-                        colorsInCheck = stateFeatures.checks.mapNotNull { (color, checks) ->
-                            if (checks.isEmpty()) null
-                            else color.toJsonStr()
-                        },
-                        legalMoves = legalMoves.map { it.toDto() },
-                        isDrawByClaimAllowed = isDrawByClaimAllowed,
-                        isFinished = isFinished,
-                        winningColor = winningColor?.toJsonStr()
+                        eliminatedColors = uiState.fenState.eliminatedColors.map { color -> color.toJsonStr() },
+                        nextMoveColor = uiState.fenState.nextMoveColor.toJsonStr(),
+                        colorsInCheck = uiState.checks
+                                .filter { (_, checks) -> checks.isNotEmpty() }
+                                .map { (color, _) -> color.toJsonStr() },
+                        legalMoves = uiState.legalMoves.map { it.toDto() },
+                        isDrawByClaimAllowed = uiState.isDrawByClaimAllowed,
+                        isFinished = uiState.isGameOver,
+                        winningColor = uiState.winningColor?.toJsonStr()
                 )
     }
 }
@@ -125,19 +119,9 @@ internal fun Move.toDto() =
                 to = to.toHumanReadableString()
         )
 
-internal fun String.toPieceTypeOrNull(): PieceType? =
+internal fun String.toPromotionPieceTypeOrNull(): PromotionPieceType? =
         try {
-            PieceType.valueOf(this.capitalize())
+            PromotionPieceType.valueOf(this.capitalize())
         } catch (e: Exception) {
             null
         }
-
-internal fun EngineStateSnapshot.toGameStateDto() =
-        GameStateDto.create(
-                state = state,
-                stateFeatures = stateFeatures,
-                legalMoves = legalMoves,
-                isDrawByClaimAllowed = isDrawByClaimAllowed,
-                isFinished = isGameOver,
-                winningColor = winningColor
-        )
