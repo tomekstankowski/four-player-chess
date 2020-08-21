@@ -21,7 +21,6 @@ internal class BotMoveExecutor(private val executorService: ExecutorService,
 
     private fun doMove(randomBots: List<RandomBot>, gameId: UUID) {
         val (move, newState) = engineInstanceStore.synchronized(gameId) { engine ->
-            Thread.sleep(1000)
             when (val move = engine.makeRandomMove()) {
                 is Move -> move to engine.getUIState()
                 else -> null
