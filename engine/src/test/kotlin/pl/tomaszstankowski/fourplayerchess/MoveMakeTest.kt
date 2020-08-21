@@ -5,7 +5,7 @@ import org.spekframework.spek2.Spek
 import pl.tomaszstankowski.fourplayerchess.engine.*
 import pl.tomaszstankowski.fourplayerchess.engine.Color.*
 
-class MoveMakeTest : Spek({
+object MoveMakeTest : Spek({
 
     test("move to an empty square") {
         val engine = createEngineWithStateFromFen("""
@@ -695,17 +695,17 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove("k9", "k4")
-        engine.makeMove("m5", "m4")
-        engine.makeMove("k4", "n7")
-        engine.makeMove("m4", "n5")
-        engine.makeMove("n7", "k7")
-        engine.makeMove("n5", "m5")
-        engine.makeMove("k7", "k4")
-        engine.makeMove("m5", "m4")
-        engine.makeMove("k4", "k7")
-        engine.makeMove("m4", "m5")
-        engine.makeMove("k7", "k4")
+        engine.makeMoveWithAssert("k9", "k4")
+        engine.makeMoveWithAssert("m5", "m4")
+        engine.makeMoveWithAssert("k4", "n7")
+        engine.makeMoveWithAssert("m4", "n5")
+        engine.makeMoveWithAssert("n7", "k7")
+        engine.makeMoveWithAssert("n5", "m5")
+        engine.makeMoveWithAssert("k7", "k4")
+        engine.makeMoveWithAssert("m5", "m4")
+        engine.makeMoveWithAssert("k4", "k7")
+        engine.makeMoveWithAssert("m4", "m5")
+        engine.makeMoveWithAssert("k7", "k4")
         engine.claimDraw()
 
         val state = engine.getUIState()
@@ -732,19 +732,19 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove("k9", "k4")
-        engine.makeMove("m5", "m4")
-        engine.makeMove("k4", "n7")
-        engine.makeMove("m4", "n5")
-        engine.makeMove("n7", "k7")
-        engine.makeMove("n5", "m5")
-        engine.makeMove("k7", "k4")
-        engine.makeMove("m5", "m4")
-        engine.makeMove("k4", "k7")
-        engine.makeMove("m4", "m5")
-        engine.makeMove("k7", "k4")
-        engine.makeMove("n4", "n5")
-        engine.makeMove("k4", "n7")
+        engine.makeMoveWithAssert("k9", "k4")
+        engine.makeMoveWithAssert("m5", "m4")
+        engine.makeMoveWithAssert("k4", "n7")
+        engine.makeMoveWithAssert("m4", "n5")
+        engine.makeMoveWithAssert("n7", "k7")
+        engine.makeMoveWithAssert("n5", "m5")
+        engine.makeMoveWithAssert("k7", "k4")
+        engine.makeMoveWithAssert("m5", "m4")
+        engine.makeMoveWithAssert("k4", "k7")
+        engine.makeMoveWithAssert("m4", "m5")
+        engine.makeMoveWithAssert("k7", "k4")
+        engine.makeMoveWithAssert("n4", "n5")
+        engine.makeMoveWithAssert("k4", "n7")
         engine.claimDraw()
 
         val state = engine.getUIState()
@@ -771,7 +771,7 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove("j6", "k4")
+        engine.makeMoveWithAssert("j6", "k4")
         engine.claimDraw()
 
         val state = engine.getUIState()
@@ -798,9 +798,9 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove("j6", "k4")
-        engine.makeMove("n4", "n5")
-        engine.makeMove("k4", "l6")
+        engine.makeMoveWithAssert("j6", "k4")
+        engine.makeMoveWithAssert("n4", "n5")
+        engine.makeMoveWithAssert("k4", "l6")
         engine.claimDraw()
 
         val state = engine.getUIState()
@@ -827,16 +827,16 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove("k9", "k4")
-        engine.makeMove("m5", "m4")
-        engine.makeMove("k4", "n7")
-        engine.makeMove("m4", "n5")
-        engine.makeMove("n7", "k7")
-        engine.makeMove("n5", "m5")
-        engine.makeMove("k7", "k4")
-        engine.makeMove("m5", "m4")
-        engine.makeMove("k4", "k7")
-        engine.makeMove("m4", "m5")
+        engine.makeMoveWithAssert("k9", "k4")
+        engine.makeMoveWithAssert("m5", "m4")
+        engine.makeMoveWithAssert("k4", "n7")
+        engine.makeMoveWithAssert("m4", "n5")
+        engine.makeMoveWithAssert("n7", "k7")
+        engine.makeMoveWithAssert("n5", "m5")
+        engine.makeMoveWithAssert("k7", "k4")
+        engine.makeMoveWithAssert("m5", "m4")
+        engine.makeMoveWithAssert("k4", "k7")
+        engine.makeMoveWithAssert("m4", "m5")
         engine.claimDraw()
 
         val state = engine.getUIState()
@@ -862,15 +862,15 @@ class MoveMakeTest : Spek({
             14
         """.trimIndent())
 
-        engine.makeMove("g4", "g9")
+        engine.makeMoveWithAssert("g4", "g9")
 
         engine.getUIState().checks shouldBeEqualTo mapOf(
-                Red to emptyList(),
-                Blue to listOf(
+                Red to emptySet(),
+                Blue to setOf(
                         Check(checkingPieceCoordinates = Coordinates.parse("g9"), checkedKingCoordinates = Coordinates.parse("c9"))
                 ),
-                Yellow to emptyList(),
-                Green to listOf(
+                Yellow to emptySet(),
+                Green to setOf(
                         Check(checkingPieceCoordinates = Coordinates.parse("g9"), checkedKingCoordinates = Coordinates.parse("m9"))
                 )
         )

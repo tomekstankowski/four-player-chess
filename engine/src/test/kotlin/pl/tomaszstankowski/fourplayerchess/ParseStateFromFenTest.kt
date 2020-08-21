@@ -8,7 +8,7 @@ import pl.tomaszstankowski.fourplayerchess.engine.Castling.QueenSide
 import pl.tomaszstankowski.fourplayerchess.engine.Color.*
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
 
-class ParseStateFromFenTest : Spek({
+object ParseStateFromFenTest : Spek({
 
     test("parses starting position") {
         val input = """

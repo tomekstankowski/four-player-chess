@@ -6,6 +6,8 @@ internal data class State(val eliminatedColors: EliminatedColorsBits,
                           val enPassantSquares: EnPassantSquaresBits,
                           val castlingOptions: CastlingOptionsBits,
                           val plyCount: Int,
+                          val lastMove: Move?,
+                          val capturedPiece: Piece?,
                           val hash: Long) {
 
     companion object {
@@ -28,6 +30,8 @@ internal data class State(val eliminatedColors: EliminatedColorsBits,
                                 enPassantSquaresBits.withEnPassantSquareForColor(color, coords)
                             },
                     plyCount = fenState.plyCount,
+                    lastMove = null,
+                    capturedPiece = null,
                     hash = hash
             )
         }

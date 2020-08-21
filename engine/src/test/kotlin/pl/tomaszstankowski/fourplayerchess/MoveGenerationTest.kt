@@ -4,10 +4,12 @@ import org.amshove.kluent.shouldBeEqualTo
 import org.amshove.kluent.shouldContain
 import org.amshove.kluent.shouldNotContain
 import org.spekframework.spek2.Spek
-import pl.tomaszstankowski.fourplayerchess.engine.*
+import pl.tomaszstankowski.fourplayerchess.engine.Coordinates
+import pl.tomaszstankowski.fourplayerchess.engine.Engine
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
+import pl.tomaszstankowski.fourplayerchess.engine.RegularMove
 
-class MoveGenerationTest : Spek({
+object MoveGenerationTest : Spek({
 
     group("pawn") {
 
@@ -33,7 +35,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g2"), to = Coordinates.parse("g3")),
                     RegularMove(from = Coordinates.parse("g2"), to = Coordinates.parse("g4"))
             )
@@ -61,7 +63,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf()
         }
 
         test("cannot go two squares forward on its first move when the square is occupied by piece of its color") {
@@ -86,7 +88,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g2"), to = Coordinates.parse("g3"))
             )
         }
@@ -113,7 +115,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf()
         }
 
         test("cannot go two squares forward on its first move when the square is occupied by piece of other color") {
@@ -138,7 +140,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g2"), to = Coordinates.parse("g3"))
             )
         }
@@ -165,7 +167,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("g4"))
             )
         }
@@ -192,7 +194,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf()
         }
 
         test("cannot move forward when has been touched before and the square forward is occupied by piece of other color") {
@@ -217,7 +219,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf()
         }
 
         test("can capture right") {
@@ -242,7 +244,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("g4")),
                     RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("h4"))
             )
@@ -270,7 +272,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("g4")),
                     RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("f4"))
             )
@@ -298,7 +300,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("g4")),
                     RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("f4")),
                     RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("h4"))
@@ -327,7 +329,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("k3"), to = Coordinates.parse("l4"))
             )
         }
@@ -354,7 +356,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("d3"), to = Coordinates.parse("c4"))
             )
         }
@@ -381,7 +383,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("g5"))
             )
         }
@@ -408,7 +410,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("h5"))
             )
         }
@@ -435,7 +437,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, Pawn) shouldBeEqualTo setOf()
         }
     }
 
@@ -463,7 +465,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("j5")),
                     RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("k6")),
                     RegularMove(from = Coordinates.parse("i4"), to = Coordinates.parse("l7")),
@@ -505,7 +507,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo setOf()
         }
 
         test("can capture pinning piece") {
@@ -530,7 +532,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("f5")),
                     RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("e6")),
                     RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("d7"))
@@ -559,7 +561,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("h5"))
             )
         }
@@ -586,7 +588,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, Bishop) shouldBeEqualTo setOf()
         }
     }
 
@@ -614,7 +616,7 @@ class MoveGenerationTest : Spek({
 
             val moves = engine.legalMoves
 
-            moves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf(
+            moves.filterByMovedPieceType(state, Knight) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("f3"), to = Coordinates.parse("g5")),
                     RegularMove(from = Coordinates.parse("f3"), to = Coordinates.parse("h4")),
                     RegularMove(from = Coordinates.parse("f3"), to = Coordinates.parse("e1")),
@@ -645,7 +647,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, Knight) shouldBeEqualTo setOf()
         }
 
         test("must stop check") {
@@ -670,7 +672,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Knight) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("i5"))
             )
         }
@@ -697,7 +699,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Knight) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, Knight) shouldBeEqualTo setOf()
         }
     }
 
@@ -725,7 +727,7 @@ class MoveGenerationTest : Spek({
 
             val moves = engine.legalMoves
 
-            moves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf(
+            moves.filterByMovedPieceType(state, Rook) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d5")),
                     RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d6")),
                     RegularMove(from = Coordinates.parse("d4"), to = Coordinates.parse("d7")),
@@ -776,7 +778,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo setOf()
         }
 
         test("can capture pinning piece") {
@@ -801,7 +803,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("f3")),
                     RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("e3")),
                     RegularMove(from = Coordinates.parse("g3"), to = Coordinates.parse("d3"))
@@ -830,7 +832,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("i4"))
             )
         }
@@ -857,7 +859,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, Rook) shouldBeEqualTo setOf()
         }
     }
 
@@ -885,7 +887,7 @@ class MoveGenerationTest : Spek({
 
             val moves = engine.legalMoves
 
-            moves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf(
+            moves.filterByMovedPieceType(state, Queen) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("j7")),
                     RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("j8")),
                     RegularMove(from = Coordinates.parse("j6"), to = Coordinates.parse("j9")),
@@ -952,7 +954,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("g5")),
                     RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("g6")),
                     RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("g7")),
@@ -983,7 +985,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("g4"), to = Coordinates.parse("i4"))
             )
         }
@@ -1010,7 +1012,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, Queen) shouldBeEqualTo setOf()
         }
     }
 
@@ -1038,7 +1040,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("e3")),
                     RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("f3")),
                     RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("f2")),
@@ -1072,7 +1074,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("e3")),
                     RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("f3")),
                     RegularMove(from = Coordinates.parse("e2"), to = Coordinates.parse("f1")),
@@ -1104,7 +1106,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("i1")),
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("g1"))
             )
@@ -1132,7 +1134,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf()
         }
 
         test("cannot castle king side when king destination square is controlled by piece of other color") {
@@ -1157,7 +1159,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("i1"))
             )
         }
@@ -1184,7 +1186,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf()
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf()
         }
 
         test("cannot castle queen side when king destination square is controlled by piece of other color") {
@@ -1209,7 +1211,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("g1"))
             )
         }
@@ -1236,7 +1238,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("f1")),
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("g1"))
             )
@@ -1264,7 +1266,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("g1"))
             )
         }
@@ -1291,7 +1293,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("i1")),
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("g1"))
             )
@@ -1319,7 +1321,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("i1"))
             )
         }
@@ -1346,7 +1348,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("j1")),
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("i1"))
             )
@@ -1374,7 +1376,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("f1")),
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("h2")),
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("g1"))
@@ -1403,7 +1405,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("j1")),
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("f1")),
                     RegularMove(from = Coordinates.parse("h1"), to = Coordinates.parse("i1")),
@@ -1434,7 +1436,7 @@ class MoveGenerationTest : Spek({
 
             val validMoves = engine.legalMoves
 
-            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo listOf(
+            validMoves.filterByMovedPieceType(state, King) shouldBeEqualTo setOf(
                     RegularMove(from = Coordinates.parse("k5"), to = Coordinates.parse("k6")),
                     RegularMove(from = Coordinates.parse("k5"), to = Coordinates.parse("l6")),
                     RegularMove(from = Coordinates.parse("k5"), to = Coordinates.parse("l5")),
@@ -1477,8 +1479,3 @@ class MoveGenerationTest : Spek({
         }
     }
 })
-
-private fun List<Move>.filterByMovedPieceType(state: FenState, pieceType: PieceType): List<Move> =
-        filter { move ->
-            (state.board.byCoordinates(move.from) as? Square.Occupied)?.piece?.type == pieceType
-        }

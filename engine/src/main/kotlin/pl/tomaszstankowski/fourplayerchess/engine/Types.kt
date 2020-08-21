@@ -210,6 +210,8 @@ sealed class Square {
             }
 
             fun by(color: Color, pieceType: PieceType): Occupied = squares[pieceType.ordinal][color.ordinal]
+
+            fun by(piece: Piece): Occupied = squares[piece.type.ordinal][piece.color.ordinal]
         }
     }
 
@@ -260,5 +262,11 @@ data class Promotion(override val from: Coordinates,
 enum class PromotionPieceType {
     Queen, Rook, Bishop, Knight;
 
-    fun toPieceType() = PieceType.valueOf(name)
+    fun toPieceType() =
+            when (this) {
+                Queen -> PieceType.Queen
+                Rook -> PieceType.Rook
+                Bishop -> PieceType.Bishop
+                Knight -> PieceType.Knight
+            }
 }

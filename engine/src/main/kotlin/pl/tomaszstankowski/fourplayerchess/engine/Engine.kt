@@ -17,9 +17,9 @@ class Engine(state: FenState = FenState.starting(),
     fun getUIState() =
             UIState(
                     fenState = position.toState(),
-                    legalMoves = this.position.legalMoves.toList(),
+                    legalMoves = this.position.legalMoves.toSet(),
                     checks = Color.values()
-                            .map { color -> color to position.checks[color.ordinal].toList() }
+                            .map { color -> color to position.checks[color.ordinal].toSet() }
                             .toMap(),
                     isDrawByClaimAllowed = (this.position.isDrawByClaimPossible) && !isGameOver,
                     isGameOver = this.isGameOver,
@@ -52,6 +52,13 @@ class Engine(state: FenState = FenState.starting(),
             return true
         }
         return false
+    }
+
+    fun unmakeMove(): Boolean {
+        if (isGameOver) {
+            return false
+        }
+        return position.unmakeMove()
     }
 
     fun makeRandomMove(): Move? {

@@ -195,6 +195,8 @@ internal class Position(fenState: FenState) {
                 enPassantSquares = getNewEnPassantSquares(move),
                 castlingOptions = getNewCastlingOptions(move),
                 plyCount = getNewPlyCount(move),
+                lastMove = move,
+                capturedPiece = getCapturedPiece(move),
                 hash = getNewHash(move)
         )
         updateBoardAndPieceLists(move)
@@ -204,12 +206,76 @@ internal class Position(fenState: FenState) {
         previousStates.add(prevState)
     }
 
+    fun unmakeMove(): Boolean {
+        val move = state.lastMove ?: return false
+        val prevState = previousStates.pop()
+        val prevColor = prevState.nextMoveColor
+        val capturedPiece = state.capturedPiece
+        val toSquare = board.byCoordinates(move.to)
+        val movedPiece = if (move is Promotion)
+            Square.Occupied.by(prevColor, Pawn).piece
+        else
+            (toSquare as Square.Occupied).piece
+        board.set(move.from, Square.Occupied.by(movedPiece))
+        pieceLists[prevColor.ordinal][movedPiece.type.ordinal].apply {
+            add(move.from)
+            remove(move.to)
+        }
+        if (move is Promotion) {
+            val promotionPieceType: PromotionPieceType = move.pieceType
+            val pieceType = promotionPieceType.toPieceType()
+            pieceLists[prevColor.ordinal][pieceType.ordinal].remove(move.to)
+        }
+        if (capturedPiece != null) {
+            val isCaptureByEnPassant = prevState.enPassantSquares.getColorByEnPassantSquare(move.to) != null
+                    && capturedPiece.type == Pawn
+            if (isCaptureByEnPassant) {
+                val capturedPawnCoords = move.to.offset(capturedPiece.color.pawnForwardVector)
+                board.apply {
+                    set(capturedPawnCoords, Square.Occupied.by(capturedPiece))
+                    set(move.to, Square.Empty)
+                }
+                pieceLists[capturedPiece.color.ordinal][capturedPiece.type.ordinal].add(capturedPawnCoords)
+            } else {
+                board.set(move.to, Square.Occupied.by(capturedPiece))
+                pieceLists[capturedPiece.color.ordinal][capturedPiece.type.ordinal].add(move.to)
+            }
+        } else {
+            board.set(move.to, Square.Empty)
+        }
+        if (movedPiece.type == King) {
+            val castling = when (move.to) {
+                move.from.offset(prevColor.kingSideVector, 2) -> KingSide
+                move.from.offset(prevColor.queenSideVector, 2) -> QueenSide
+                else -> null
+            }
+            if (castling != null) {
+                val coordsBeforeCastling = getRookCoordinatesBeforeCastling(prevColor, castling)
+                val coordsAfterCastling = getRookCoordinatesAfterCastling(prevColor, castling)
+                board.apply {
+                    set(coordsAfterCastling, Square.Empty)
+                    set(coordsBeforeCastling, Square.Occupied.by(prevColor, Rook))
+                }
+                pieceLists[prevColor.ordinal][Rook.ordinal].apply {
+                    remove(coordsAfterCastling)
+                    add(coordsBeforeCastling)
+                }
+            }
+        }
+        state = prevState
+        computeStateFeatures()
+        genLegalMoves()
+        return true
+    }
+
     fun makeResignation(color: Color) {
         val pseudoState = state.copy(
                 eliminatedColors = state.eliminatedColors.withColorEliminated(color),
                 nextMoveColor = if (state.nextMoveColor == color) getNewNextMoveColor() else state.nextMoveColor,
                 enPassantSquares = state.enPassantSquares.dropEnPassantSquareForColor(color),
-                hash = getNewHash(eliminatedColor = color)
+                hash = getNewHash(eliminatedColor = color),
+                lastMove = null,
+                capturedPiece = null
         )
         val prevState = state
         state = pseudoState
@@ -302,6 +368,22 @@ internal class Position(fenState: FenState) {
         val srcSquare = board.byCoordinates(move.from)
         val movedPieceType = (srcSquare as Square.Occupied).piece.type
         return movedPieceType == Pawn && state.enPassantSquares.getColorByEnPassantSquare(move.to) != null
+    }
+
+    private fun getCapturedPiece(move: Move): Piece? {
+        val toSquare = board.byCoordinates(move.to)
+        if (toSquare is Square.Occupied) {
+            return toSquare.piece
+        }
+        val fromSquare = board.byCoordinates(move.from)
+        val movedPieceType = (fromSquare as Square.Occupied).piece.type
+        if (movedPieceType == Pawn) {
+            val enPassantSquareColor = state.enPassantSquares.getColorByEnPassantSquare(move.to)
+            if (enPassantSquareColor != null) {
+                return Square.Occupied.by(enPassantSquareColor, Pawn).piece
+            }
+        }
+        return null
     }
 
     private fun getNewNextMoveColor(): Color {
