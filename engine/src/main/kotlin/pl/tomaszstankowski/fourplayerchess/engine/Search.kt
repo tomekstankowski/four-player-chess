@@ -13,9 +13,8 @@ internal class ParanoidSearch(var pos: Position,
         TranspositionTable()
     }
     private var gamePly: Short = 0
-    var nodesCnt = 0
-    var leafCnt = 0
-
+    private var nodesCnt = 0
+    private var leafCnt = 0
 
     fun findBestMove(): MoveBits {
         val searchStartTime = System.currentTimeMillis()
@@ -33,6 +32,8 @@ internal class ParanoidSearch(var pos: Position,
             val iterationEndTime = System.currentTimeMillis()
             val iterationDurationMs = iterationEndTime - iterationStartTime
             println("Depth $depth took $iterationDurationMs ms")
+            println("Nodes: $nodesCnt")
+            println("leaves: $leafCnt")
             println("${pos.nextMoveColor} position evaluation: $value")
             val searchDurationMs = iterationEndTime - searchStartTime
             val timeRemainingMs = maxSearchDuration.toMillis() - searchDurationMs
@@ -45,9 +46,12 @@ internal class ParanoidSearch(var pos: Position,
         println("Found best move in $searchDurationMs ms")
         val nodesPerSec: Float = nodesCnt.toFloat() / searchDurationMs * 1000
         println("nodes/s: $nodesPerSec")
-        println("leaves: $leafCnt")
+
         val tt = transpositionTables[pos.nextMoveColor.ordinal]
         tt.logState()
+
+        println()
+
         gamePly++
         return tt.get(pos.hash)
                 ?.move

@@ -77,6 +77,9 @@ internal class Position(private val previousStates: LinkedList<State>,
                     hash = hash xor zobrist.getEnPassantVal(color, enPassantSqrCoords.squareIndex)
                 }
             }
+            fenState.eliminatedColors.forEach { color ->
+                hash = hash xor zobrist.getEliminatedColorValue(color)
+            }
             return hash
         }
 
