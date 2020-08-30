@@ -1,82 +1,132 @@
 package pl.tomaszstankowski.fourplayerchess.engine
 
+import gnu.trove.list.array.TIntArrayList
+import gnu.trove.list.array.TShortArrayList
+import gnu.trove.list.linked.TIntLinkedList
 import pl.tomaszstankowski.fourplayerchess.engine.Castling.KingSide
 import pl.tomaszstankowski.fourplayerchess.engine.Castling.QueenSide
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
 import java.util.*
-import kotlin.collections.HashSet
 import kotlin.math.min
 import kotlin.random.Random
 
-internal class Position(fenState: FenState) {
-    private val previousStates: LinkedList<State> = LinkedList()
-    private var state: State
-    private val board: Board
-    private val pieceLists: Array<Array<PieceList>> = Array(Color.values().size) {
-        Array(PieceType.values().size) {
-            LinkedList<Coordinates>()
+internal class Position(private val previousStates: LinkedList<State>,
+                        private var state: State,
+                        private val board: Array<Square?>) {
+    private val pieceLists: Array<Array<PieceList>> = Array(allColors.size) {
+        Array(allPieceTypes.size) {
+            TIntLinkedList()
         }
     }
-    private val attackedSquares: Array<MutableSet<Coordinates>> = Array(Color.values().size) {
-        HashSet<Coordinates>()
-    }
-    private val pins: Array<MutableList<Pin>> = Array(Color.values().size) {
-        mutableListOf<Pin>()
-    }
-    val checks: Array<MutableList<Check>> = Array(Color.values().size) {
-        mutableListOf<Check>()
-    }
-    val legalMoves: MutableList<Move> = mutableListOf()
 
-    private val zobrist = ZobristSignatures(Random(2137))
+    // for each color squares attacked by this color
+    private val attackedSquares: Array<BooleanArray> = Array(allColors.size) {
+        BooleanArray(BOARD_SIZE * BOARD_SIZE) { false }
+    }
+
+    // for each color squares that checked king of this color cannot move into but other kings can if only these squares are not attacked
+    private val scannedSquaresBehindKing: Array<TIntArrayList> = Array(allColors.size) {
+        TIntArrayList()
+    }
+
+    // for each color pins against this color
+    private val pins: Array<TShortArrayList> = Array(allColors.size) {
+        TShortArrayList()
+    }
+
+    // for each color checks against this color
+    val checks: Array<TShortArrayList> = Array(allColors.size) {
+        TShortArrayList()
+    }
+    private val legalMoves: TIntArrayList = TIntArrayList()
 
     init {
-        val stateHash = hashState(fenState)
-        this.state = State.of(fenState, stateHash)
-        board = fenState.board.copyOf()
-        Coordinates.allCoordinates.forEach { coords ->
-            val square = board.byCoordinates(coords)
+        for (i in 0 until BOARD_SIZE * BOARD_SIZE) {
+            val square = this.board[i]
             if (square is Square.Occupied) {
                 val piece = square.piece
-                pieceLists[piece.color.ordinal][piece.type.ordinal].add(coords)
+                pieceLists[piece.color.ordinal][piece.type.ordinal].add(i)
             }
         }
-        computeStateFeatures()
-        genLegalMoves()
+        checkAttackVectors()
+        generateLegalMoves()
     }
 
+    companion object {
+        private val zobrist = ZobristSignatures(Random(2137))
+
+        private fun hashState(fenState: FenState): Long {
+            var hash = 0L
+            fenState.board.forEachIndexed { rank, row ->
+                row.forEachIndexed { file, square ->
+                    if (square is Square.Occupied) {
+                        val piece = square.piece
+                        val coords = Coordinates.ofFileAndRank(file, rank)
+                        hash = hash xor zobrist.getPieceSquareVal(piece, coords.squareIndex)
+                    }
+                }
+            }
+            hash = hash xor zobrist.getNextMoveColorVal(fenState.nextMoveColor)
+            allColors.forEach { color ->
+                hash = hash xor zobrist.getCastlingOptionsValue(color, fenState.castlingOptions[color]
+                        ?: castlingOptionsNone)
+            }
+            allColors.forEach { color ->
+                val enPassantSqrCoords = fenState.enPassantSquares[color]
+                if (enPassantSqrCoords != null) {
+                    hash = hash xor zobrist.getEnPassantVal(color, enPassantSqrCoords.squareIndex)
+                }
+            }
+            return hash
+        }
+
+        fun fromFenState(fenState: FenState): Position {
+            val stateHash = hashState(fenState)
+            val state = State.of(fenState, stateHash)
+            val board = arrayOfNulls<Square?>(BOARD_SIZE * BOARD_SIZE)
+            for (i in 0 until BOARD_SIZE)
+                for (j in 0 until BOARD_SIZE)
+                    board[i * BOARD_SIZE + j] = fenState.board[i][j]
+            return Position(
+                    previousStates = LinkedList(),
+                    state = state,
+                    board = board
+            )
+        }
+    }
+
+    fun getLegalMoves(): IntArray = legalMoves.toArray()
+
+    val hash: Long
+        get() = state.hash
 
     val isFiftyMoveRule: Boolean
         get() = state.plyCount > 99
 
     val isThreeFoldRepetition: Boolean
         get() {
-            var i = 0
-            val end = min(state.plyCount, previousStates.size)
-            val playingColorsCount = Color.values().size - state.eliminatedColors.eliminatedColorsCount
-            if (end < playingColorsCount * 2 - 1) {
+            var pliesRemaining = min(state.plyCount, previousStates.size)
+            val playingColorsCount = allColors.size - state.eliminatedColors.eliminatedColorsCount
+            if (pliesRemaining < playingColorsCount * 2 - 1) {
                 return false
             }
             val iterator = previousStates.descendingIterator()
             var repCount = 0
-            while (i <= end - playingColorsCount) {
-                var prevState: State
-                do {
-                    prevState = iterator.next()
-                    i++
-                } while (prevState.nextMoveColor != state.nextMoveColor)
+            while (pliesRemaining > 0) {
+                val prevState = iterator.next()
                 if (prevState.hash == state.hash) {
                     repCount++
                     if (repCount == 2) {
                         return true
                     }
                 }
+                pliesRemaining--
             }
             return false
         }
 
     private val isStaleMate: Boolean
-        get() = Color.values().size - state.eliminatedColors.eliminatedColorsCount == 2 && legalMoves.isEmpty()
+        get() = allColors.size - state.eliminatedColors.eliminatedColorsCount == 2 && legalMoves.isEmpty()
 
     val isDrawByClaimPossible: Boolean
         get() = isFiftyMoveRule || isThreeFoldRepetition
@@ -91,8 +141,8 @@ internal class Position(fenState: FenState) {
 
     val winner: Color?
         get() =
-            if (state.eliminatedColors.eliminatedColorsCount == Color.values().size - 1)
-                Color.values().firstOrNull { c -> !state.eliminatedColors.isEliminated(c) }
+            if (state.eliminatedColors.eliminatedColorsCount == allColors.size - 1)
+                allColors.firstOrNull { c -> !state.eliminatedColors.isEliminated(c) }
             else
                 null
 
@@ -100,10 +150,10 @@ internal class Position(fenState: FenState) {
         get() {
             if (isEachKingAlone())
                 return true
-            val isOneVsOne = state.eliminatedColors.eliminatedColorsCount == Color.values().size - 2
+            val isOneVsOne = state.eliminatedColors.eliminatedColorsCount == allColors.size - 2
             if (isOneVsOne) {
-                val firstColor = Color.values().first { !state.eliminatedColors.isEliminated(it) }
-                val secondColor = Color.values().first { it != firstColor && !state.eliminatedColors.isEliminated(it) }
+                val firstColor = allColors.first { !state.eliminatedColors.isEliminated(it) }
+                val secondColor = allColors.first { it != firstColor && !state.eliminatedColors.isEliminated(it) }
                 return isKingVsKingAndBishop(firstColor, secondColor)
                         || isKingVsKingAndBishop(secondColor, firstColor)
                         || isKingVsKingAndKnight(firstColor, secondColor)
@@ -114,82 +164,94 @@ internal class Position(fenState: FenState) {
         }
 
     private fun isEachKingAlone(): Boolean {
-        for (i in Color.values().indices) {
-            for (j in PieceType.values().indices) {
-                if (!state.eliminatedColors.isEliminated(Color.values()[i])
-                        && j != King.ordinal
-                        && pieceLists[i][j].isNotEmpty()) {
-                    return false
+        for (i in allColors.indices) {
+            if (!state.eliminatedColors.isEliminated(allColors[i])) {
+                for (j in allPieceTypes.indices) {
+                    if (j != King.ordinal
+                            && !pieceLists[i][j].isEmpty) {
+                        return false
+                    }
                 }
             }
         }
         return true
     }
 
-    private fun countByColorAndPieceType(color: Color, pieceType: PieceType) =
-            pieceLists[color.ordinal][pieceType.ordinal].size
+    fun countPiecesBy(color: Color, pieceType: PieceType) =
+            pieceLists[color.ordinal][pieceType.ordinal].size()
 
     private fun isKingVsKingAndBishop(firstColor: Color, secondColor: Color) =
-            countByColorAndPieceType(firstColor, Pawn) == 0
-                    && countByColorAndPieceType(firstColor, Knight) == 0
-                    && countByColorAndPieceType(firstColor, Bishop) == 0
-                    && countByColorAndPieceType(firstColor, Rook) == 0
-                    && countByColorAndPieceType(firstColor, Queen) == 0
-                    && countByColorAndPieceType(secondColor, Pawn) == 0
-                    && countByColorAndPieceType(secondColor, Knight) == 0
-                    && countByColorAndPieceType(secondColor, Bishop) == 1
-                    && countByColorAndPieceType(secondColor, Rook) == 0
-                    && countByColorAndPieceType(secondColor, Queen) == 0
+            countPiecesBy(firstColor, Pawn) == 0
+                    && countPiecesBy(firstColor, Knight) == 0
+                    && countPiecesBy(firstColor, Bishop) == 0
+                    && countPiecesBy(firstColor, Rook) == 0
+                    && countPiecesBy(firstColor, Queen) == 0
+                    && countPiecesBy(secondColor, Pawn) == 0
+                    && countPiecesBy(secondColor, Knight) == 0
+                    && countPiecesBy(secondColor, Bishop) == 1
+                    && countPiecesBy(secondColor, Rook) == 0
+                    && countPiecesBy(secondColor, Queen) == 0
 
     private fun isKingVsKingAndKnight(firstColor: Color, secondColor: Color) =
-            countByColorAndPieceType(firstColor, Pawn) == 0
-                    && countByColorAndPieceType(firstColor, Knight) == 0
-                    && countByColorAndPieceType(firstColor, Bishop) == 0
-                    && countByColorAndPieceType(firstColor, Rook) == 0
-                    && countByColorAndPieceType(firstColor, Queen) == 0
-                    && countByColorAndPieceType(secondColor, Pawn) == 0
-                    && countByColorAndPieceType(secondColor, Knight) == 1
-                    && countByColorAndPieceType(secondColor, Bishop) == 0
-                    && countByColorAndPieceType(secondColor, Rook) == 0
-                    && countByColorAndPieceType(secondColor, Queen) == 0
+            countPiecesBy(firstColor, Pawn) == 0
+                    && countPiecesBy(firstColor, Knight) == 0
+                    && countPiecesBy(firstColor, Bishop) == 0
+                    && countPiecesBy(firstColor, Rook) == 0
+                    && countPiecesBy(firstColor, Queen) == 0
+                    && countPiecesBy(secondColor, Pawn) == 0
+                    && countPiecesBy(secondColor, Knight) == 1
+                    && countPiecesBy(secondColor, Bishop) == 0
+                    && countPiecesBy(secondColor, Rook) == 0
+                    && countPiecesBy(secondColor, Queen) == 0
 
     private fun isKingAndBishopVsKingAndBishopOfSameType(firstColor: Color, secondColor: Color): Boolean {
-        val isKBvsKB = countByColorAndPieceType(firstColor, Pawn) == 0
-                && countByColorAndPieceType(firstColor, Knight) == 0
-                && countByColorAndPieceType(firstColor, Bishop) == 1
-                && countByColorAndPieceType(firstColor, Rook) == 0
-                && countByColorAndPieceType(firstColor, Queen) == 0
-                && countByColorAndPieceType(secondColor, Pawn) == 0
-                && countByColorAndPieceType(secondColor, Knight) == 0
-                && countByColorAndPieceType(secondColor, Bishop) == 1
-                && countByColorAndPieceType(secondColor, Rook) == 0
-                && countByColorAndPieceType(secondColor, Queen) == 0
+        val isKBvsKB = countPiecesBy(firstColor, Pawn) == 0
+                && countPiecesBy(firstColor, Knight) == 0
+                && countPiecesBy(firstColor, Bishop) == 1
+                && countPiecesBy(firstColor, Rook) == 0
+                && countPiecesBy(firstColor, Queen) == 0
+                && countPiecesBy(secondColor, Pawn) == 0
+                && countPiecesBy(secondColor, Knight) == 0
+                && countPiecesBy(secondColor, Bishop) == 1
+                && countPiecesBy(secondColor, Rook) == 0
+                && countPiecesBy(secondColor, Queen) == 0
         if (!isKBvsKB) {
             return false
         }
-        val firstBishopCoords = pieceLists[firstColor.ordinal][Bishop.ordinal].first
-        val secondBishopCoords = pieceLists[secondColor.ordinal][Bishop.ordinal].first
-        return firstBishopCoords.isLightSquare == secondBishopCoords.isLightSquare
+        val firstBishopPos = pieceLists[firstColor.ordinal][Bishop.ordinal][0]
+        val secondBishopPos = pieceLists[secondColor.ordinal][Bishop.ordinal][0]
+        return isLightSquare(firstBishopPos) == isLightSquare(secondBishopPos)
     }
 
-    fun toState() =
+    fun copy() = Position(
+            previousStates = LinkedList(this.previousStates),
+            board = this.board.copyOf(),
+            state = this.state
+    )
+
+    fun toFenState() =
             FenState(
-                    board = this.board.copyOf(),
-                    eliminatedColors = Color.values().filter { color ->
+                    board = Array(BOARD_SIZE) { i ->
+                        Array(BOARD_SIZE) { j ->
+                            this.board[i * BOARD_SIZE + j]
+                        }
+                    },
+                    eliminatedColors = allColors.filter { color ->
                         this.state.eliminatedColors.isEliminated(color)
                     }.toSet(),
-                    enPassantSquares = Color.values().mapNotNull { color ->
+                    enPassantSquares = allColors.mapNotNull { color ->
                         this.state.enPassantSquares.getEnPassantSquareByColor(color)
-                                ?.let { coords -> color to coords }
+                                .takeIf { squareIndex -> squareIndex != NULL_SQUARE }
+                                ?.let { squareIndex -> color to Coordinates(squareFile(squareIndex), squareRank(squareIndex)) }
                     }.toMap(),
                     nextMoveColor = this.state.nextMoveColor,
-                    castlingOptions = Color.values().map { color ->
+                    castlingOptions = allColors.map { color ->
                         color to this.state.castlingOptions[color]
                     }.toMap(),
                     plyCount = this.state.plyCount
             )
 
-    fun makeMove(move: Move) {
+    fun makeMove(move: MoveBits) {
         val pseudoState = state.copy(
                 nextMoveColor = getNewNextMoveColor(),
                 enPassantSquares = getNewEnPassantSquares(move),
@@ -207,65 +269,87 @@ internal class Position(fenState: FenState) {
     }
 
     fun unmakeMove(): Boolean {
-        val move = state.lastMove ?: return false
-        val prevState = previousStates.pop()
+        val move = state.lastMove
+        if (move == NULL_MOVE) {
+            return false
+        }
+        val from = move.from
+        val to = move.to
+        val promotionPieceType = move.promotionPieceType
+        val prevState = previousStates.removeLast()
         val prevColor = prevState.nextMoveColor
         val capturedPiece = state.capturedPiece
-        val toSquare = board.byCoordinates(move.to)
-        val movedPiece = if (move is Promotion)
+        val toSquare = board[to]
+        val movedPiece = if (promotionPieceType != null)
             Square.Occupied.by(prevColor, Pawn).piece
         else
             (toSquare as Square.Occupied).piece
-        board.set(move.from, Square.Occupied.by(movedPiece))
+        board[from] = Square.Occupied.by(movedPiece)
         pieceLists[prevColor.ordinal][movedPiece.type.ordinal].apply {
-            add(move.from)
-            remove(move.to)
+            add(from)
+            remove(to)
         }
-        if (move is Promotion) {
-            val promotionPieceType: PromotionPieceType = move.pieceType
+        if (promotionPieceType != null) {
             val pieceType = promotionPieceType.toPieceType()
-            pieceLists[prevColor.ordinal][pieceType.ordinal].remove(move.to)
+            pieceLists[prevColor.ordinal][pieceType.ordinal].remove(to)
         }
         if (capturedPiece != null) {
-            val isCaptureByEnPassant = prevState.enPassantSquares.getColorByEnPassantSquare(move.to) != null
+            val isCaptureByEnPassant = prevState.enPassantSquares.getColorByEnPassantSquare(to) != null
                     && capturedPiece.type == Pawn
             if (isCaptureByEnPassant) {
-                val capturedPawnCoords = move.to.offset(capturedPiece.color.pawnForwardVector)
-                board.apply {
-                    set(capturedPawnCoords, Square.Occupied.by(capturedPiece))
-                    set(move.to, Square.Empty)
-                }
-                pieceLists[capturedPiece.color.ordinal][capturedPiece.type.ordinal].add(capturedPawnCoords)
+                val capturedPawnSquareIndex = offsetSquareBy(to, capturedPiece.color.pawnForwardOffset)
+                board[capturedPawnSquareIndex] = Square.Occupied.by(capturedPiece)
+                board[to] = Square.Empty
+                pieceLists[capturedPiece.color.ordinal][capturedPiece.type.ordinal].add(capturedPawnSquareIndex)
             } else {
-                board.set(move.to, Square.Occupied.by(capturedPiece))
-                pieceLists[capturedPiece.color.ordinal][capturedPiece.type.ordinal].add(move.to)
+                board[to] = Square.Occupied.by(capturedPiece)
+                pieceLists[capturedPiece.color.ordinal][capturedPiece.type.ordinal].add(to)
             }
         } else {
-            board.set(move.to, Square.Empty)
+            board[to] = Square.Empty
         }
         if (movedPiece.type == King) {
-            val castling = when (move.to) {
-                move.from.offset(prevColor.kingSideVector, 2) -> KingSide
-                move.from.offset(prevColor.queenSideVector, 2) -> QueenSide
+            val castling = when (to) {
+                offsetSquareBy(from, 2 * prevColor.kingSideOffset) -> KingSide
+                offsetSquareBy(from, 2 * prevColor.queenSideOffset) -> QueenSide
                 else -> null
             }
             if (castling != null) {
-                val coordsBeforeCastling = getRookCoordinatesBeforeCastling(prevColor, castling)
-                val coordsAfterCastling = getRookCoordinatesAfterCastling(prevColor, castling)
-                board.apply {
-                    set(coordsAfterCastling, Square.Empty)
-                    set(coordsBeforeCastling, Square.Occupied.by(prevColor, Rook))
-                }
+                val squareIndexBeforeCastling = rookSquareBeforeCastling[prevColor.ordinal][castling.ordinal]
+                val squareIndexAfterCastling = rookSquareAfterCastling[prevColor.ordinal][castling.ordinal]
+                board[squareIndexAfterCastling] = Square.Empty
+                board[squareIndexBeforeCastling] = Square.Occupied.by(prevColor, Rook)
                 pieceLists[prevColor.ordinal][Rook.ordinal].apply {
-                    remove(coordsAfterCastling)
-                    add(coordsBeforeCastling)
+                    remove(squareIndexAfterCastling)
+                    add(squareIndexBeforeCastling)
                 }
             }
         }
         state = prevState
-        computeStateFeatures()
-        genLegalMoves()
+        checkAttackVectors()
+        generateLegalMoves()
         return true
+    }
+
+    private fun assertState() {
+        try {
+            allColors.forEach { color ->
+                assert(countPiecesBy(color, Pawn) <= 8) { "Too many pawns for color $color" }
+                assert(countPiecesBy(color, King) <= 1) { "Too many kings for color $color" }
+            }
+            allColors.forEach { color ->
+                allPieceTypes.forEach { pieceType ->
+                    pieceLists[color.ordinal][pieceType.ordinal].forEach {
+                        val isOccupied = board[it] is Square.Occupied
+                        assert(isOccupied) { "$color $pieceType not on the board, square index: $it" }
+                        true
+                    }
+                }
+            }
+        } catch (e: Throwable) {
+            val fen = toFenState().toFen()
+            throw IllegalStateException("Illegal internal state detected, last move: ${state.lastMove}, FEN:\n$fen", e)
+        }
     }
 
     fun makeResignation(color: Color) {
@@ -274,7 +358,7 @@ internal class Position(fenState: FenState) {
                 nextMoveColor = if (state.nextMoveColor == color) getNewNextMoveColor() else state.nextMoveColor,
                 enPassantSquares = state.enPassantSquares.dropEnPassantSquareForColor(color),
                 hash = getNewHash(eliminatedColor = color),
-                lastMove = null,
+                lastMove = NULL_MOVE,
                 capturedPiece = null
         )
         val prevState = state
@@ -284,11 +368,11 @@ internal class Position(fenState: FenState) {
     }
 
     private tailrec fun findLegalState() {
-        computeStateFeatures()
-        genLegalMoves()
-        if (legalMoves.isEmpty()) {
+        checkAttackVectors()
+        generateLegalMoves()
+        if (legalMoves.isEmpty) {
             val color = state.nextMoveColor
-            val isCheck = checks[color.ordinal].isNotEmpty()
+            val isCheck = checks[color.ordinal].size() > 0
             val isEliminated = isCheck || state.eliminatedColors.eliminatedColorsCount < 2
             if (isEliminated) {
                 state = state.copy(
@@ -302,83 +386,90 @@ internal class Position(fenState: FenState) {
         }
     }
 
-    private fun updateBoardAndPieceLists(move: Move) {
+    private fun updateBoardAndPieceLists(move: MoveBits) {
         val color = state.nextMoveColor
+        val from = move.from
+        val to = move.to
+        val promotionPieceType = move.promotionPieceType
 
         // query before board gets updated
-        val fromSquare = board.byCoordinates(move.from)
-        val toSquare = board.byCoordinates(move.to)
+        val fromSquare = board[from]
+        val toSquare = board[to]
         val movedPiece = (fromSquare as Square.Occupied).piece
         val castling = getCastling(move)
         val isCaptureByEnPassant = isCaptureByEnPassant(move)
 
-        board.set(move.from, Square.Empty)
-        board.set(move.to, fromSquare)
+        board[from] = Square.Empty
+        board[to] = fromSquare
         pieceLists[color.ordinal][movedPiece.type.ordinal].apply {
-            remove(move.from)
-            add(move.to)
+            remove(from)
+            add(to)
         }
         if (toSquare is Square.Occupied) {
             val capturedPiece = toSquare.piece
             pieceLists[capturedPiece.color.ordinal][capturedPiece.type.ordinal].apply {
-                remove(move.to)
+                remove(to)
             }
         }
         if (castling != null) {
-            val oldRookCoords = getRookCoordinatesBeforeCastling(color, castling)
-            val newRookCoords = getRookCoordinatesAfterCastling(color, castling)
-            board.set(oldRookCoords, Square.Empty)
-            board.set(newRookCoords, Square.Occupied.by(color, Rook))
+            val rookSquareIndexBeforeCastling = rookSquareBeforeCastling[color.ordinal][castling.ordinal]
+            val rookSquareIndexAfterCastling = rookSquareAfterCastling[color.ordinal][castling.ordinal]
+            board[rookSquareIndexBeforeCastling] = Square.Empty
+            board[rookSquareIndexAfterCastling] = Square.Occupied.by(color, Rook)
             pieceLists[color.ordinal][Rook.ordinal].apply {
-                remove(oldRookCoords)
-                add(newRookCoords)
+                remove(rookSquareIndexBeforeCastling)
+                add(rookSquareIndexAfterCastling)
             }
         }
         if (isCaptureByEnPassant) {
-            val capturedPawnColor = state.enPassantSquares.getColorByEnPassantSquare(move.to)!!
-            val capturedPawnCoords = move.to.offset(capturedPawnColor.pawnForwardVector)
-            board.set(capturedPawnCoords, Square.Empty)
-            pieceLists[capturedPawnColor.ordinal][Pawn.ordinal].remove(capturedPawnCoords)
+            val capturedPawnColor = state.enPassantSquares.getColorByEnPassantSquare(to)!!
+            val capturedPawnSquareIndex = offsetSquareBy(to, capturedPawnColor.pawnForwardOffset)
+            board[capturedPawnSquareIndex] = Square.Empty
+            pieceLists[capturedPawnColor.ordinal][Pawn.ordinal].remove(capturedPawnSquareIndex)
         }
-        if (move is Promotion) {
-            val promotionPieceType: PromotionPieceType = move.pieceType
+        if (promotionPieceType != null) {
             val newPieceType = promotionPieceType.toPieceType()
             val newSquare = Square.Occupied.by(color, newPieceType)
-            board.set(move.to, newSquare)
-            pieceLists[color.ordinal][Pawn.ordinal].remove(move.to)
-            pieceLists[color.ordinal][newPieceType.ordinal].add(move.to)
+            board[to] = newSquare
+            pieceLists[color.ordinal][Pawn.ordinal].remove(to)
+            pieceLists[color.ordinal][newPieceType.ordinal].add(to)
         }
     }
 
-    private fun getCastling(move: Move): Castling? {
-        val square = board.byCoordinates(move.from)
+    private fun getCastling(move: MoveBits): Castling? {
+        val from = move.from
+        val to = move.to
+        val square = board[from]
         val movedPieceType = (square as Square.Occupied).piece.type
-        if (movedPieceType == King) {
-            if (move.from.offsetOrNull(state.nextMoveColor.kingSideVector, 2) == move.to) {
+        val movedPieceColor = state.nextMoveColor
+        if (movedPieceType == King && from == movedPieceColor.defaultKingSquare) {
+            if (to == kingSquareAfterCastling[movedPieceColor.ordinal][KingSide.ordinal]) {
                 return KingSide
             }
-            if (move.from.offsetOrNull(state.nextMoveColor.queenSideVector, 2) == move.to) {
+            if (to == kingSquareAfterCastling[movedPieceColor.ordinal][QueenSide.ordinal]) {
                 return QueenSide
             }
         }
         return null
     }
 
-    private fun isCaptureByEnPassant(move: Move): Boolean {
-        val srcSquare = board.byCoordinates(move.from)
+    private fun isCaptureByEnPassant(move: MoveBits): Boolean {
+        val srcSquare = board[move.from]
         val movedPieceType = (srcSquare as Square.Occupied).piece.type
         return movedPieceType == Pawn && state.enPassantSquares.getColorByEnPassantSquare(move.to) != null
     }
 
-    private fun getCapturedPiece(move: Move): Piece? {
-        val toSquare = board.byCoordinates(move.to)
+    private fun getCapturedPiece(move: MoveBits): Piece? {
+        val from = move.from
+        val to = move.to
+        val toSquare = board[to]
         if (toSquare is Square.Occupied) {
             return toSquare.piece
         }
-        val fromSquare = board.byCoordinates(move.from)
+        val fromSquare = board[from]
         val movedPieceType = (fromSquare as Square.Occupied).piece.type
         if (movedPieceType == Pawn) {
-            val enPassantSquareColor = state.enPassantSquares.getColorByEnPassantSquare(move.to)
+            val enPassantSquareColor = state.enPassantSquares.getColorByEnPassantSquare(to)
             if (enPassantSquareColor != null) {
                 return Square.Occupied.by(enPassantSquareColor, Pawn).piece
             }
@@ -391,113 +482,121 @@ internal class Position(fenState: FenState) {
     }
 
     private tailrec fun newNextMoveColor(currentColor: Color): Color {
-        val newColorIndex = (currentColor.ordinal + 1) % Color.values().size
-        val newColor = Color.values()[newColorIndex]
+        val newColorIndex = (currentColor.ordinal + 1) % allColors.size
+        val newColor = allColors[newColorIndex]
         if (!state.eliminatedColors.isEliminated(newColor)) {
             return newColor
         }
         return newNextMoveColor(currentColor = newColor)
     }
 
-    private fun getNewEnPassantSquares(move: Move): EnPassantSquaresBits {
-        return Color.values().fold(initialEnPassantSquares()) { newSqrs, color ->
+    private fun getNewEnPassantSquares(move: MoveBits): EnPassantSquaresBits {
+        val from = move.from
+        val to = move.to
+        return allColors.fold(initialEnPassantSquares()) { newSqrs, color ->
             if (state.nextMoveColor == color) {
-                val square = board.byCoordinates(move.from) as Square.Occupied
-                if (square.piece.type == Pawn && move.from.offset(color.pawnForwardVector, 2) == move.to) {
-                    val enPassantCoords = move.from.offset(color.pawnForwardVector)
-                    newSqrs.withEnPassantSquareForColor(color, enPassantCoords)
+                val square = board[from] as Square.Occupied
+                if (square.piece.type == Pawn && offsetSquareBy(from, 2 * color.pawnForwardOffset) == to) {
+                    val enPassantSquareIndex = offsetSquareBy(from, color.pawnForwardOffset)
+                    newSqrs.withEnPassantSquareForColor(color, enPassantSquareIndex)
                 } else {
                     newSqrs
                 }
             } else {
-                state.enPassantSquares.getEnPassantSquareByColor(color)
-                        ?.takeIf { move.to != it }
-                        ?.takeIf {
-                            val pawnCoords = it.offset(color.pawnForwardVector)
-                            pawnCoords != move.to
-                        }
-                        ?.let { newSqrs.withEnPassantSquareForColor(color, it) }
-                        ?: newSqrs
+                val squareIndex = state.enPassantSquares.getEnPassantSquareByColor(color)
+                if (squareIndex != NULL_SQUARE
+                        && to != squareIndex
+                        && offsetSquareBy(squareIndex, color.pawnForwardOffset) != to) {
+                    newSqrs.withEnPassantSquareForColor(color, squareIndex)
+                } else {
+                    newSqrs
+                }
             }
         }
     }
 
-    private fun getNewCastlingOptions(move: Move): CastlingOptionsBits =
-            Color.values().fold(state.castlingOptions) { acc, color ->
-                if (color == state.nextMoveColor) {
-                    val square = board.byCoordinates(move.from) as Square.Occupied
-                    when (square.piece.type) {
-                        King -> acc
-                                .dropCastlingForColor(color, KingSide)
-                                .dropCastlingForColor(color, QueenSide)
-                        Rook -> {
-                            when (move.from) {
-                                getRookCoordinatesBeforeCastling(color, KingSide) ->
-                                    acc.dropCastlingForColor(color, KingSide)
-                                getRookCoordinatesBeforeCastling(color, QueenSide) ->
-                                    acc.dropCastlingForColor(color, QueenSide)
-                                else ->
-                                    acc
-                            }
-                        }
-                        else -> acc
-                    }
-                } else {
-                    acc
-                }
+    private fun getNewCastlingOptions(move: MoveBits): CastlingOptionsBits {
+        val from = move.from
+        val to = move.to
+        val fromSquare = board[from] as Square.Occupied
+        val toSquare = board[to]
+        val color = state.nextMoveColor
+        var castlingRights = state.castlingOptions
+        if (fromSquare.piece.type == King) {
+            castlingRights = castlingRights
+                    .dropCastlingForColor(color, KingSide)
+                    .dropCastlingForColor(color, QueenSide)
+        } else if (fromSquare.piece.type == Rook) {
+            if (from == rookSquareBeforeCastling[color.ordinal][KingSide.ordinal]) {
+                castlingRights = castlingRights.dropCastlingForColor(color, KingSide)
+            } else if (from == rookSquareBeforeCastling[color.ordinal][QueenSide.ordinal]) {
+                castlingRights = castlingRights.dropCastlingForColor(color, QueenSide)
             }
+        }
+        if (toSquare is Square.Occupied && toSquare.piece.type == Rook) {
+            val capturedColor = toSquare.piece.color
+            if (to == rookSquareBeforeCastling[capturedColor.ordinal][KingSide.ordinal]) {
+                castlingRights = castlingRights.dropCastlingForColor(capturedColor, KingSide)
+            } else if (to == rookSquareBeforeCastling[capturedColor.ordinal][QueenSide.ordinal]) {
+                castlingRights = castlingRights.dropCastlingForColor(capturedColor, QueenSide)
+            }
+        }
+        return castlingRights
+    }
 
-    private fun getNewPlyCount(move: Move): Int {
+    private fun getNewPlyCount(move: MoveBits): Int {
         if (isRegularCapture(move) || isPawnAdvance(move)) {
             return 0
         }
         return state.plyCount + 1
     }
 
-    private fun isRegularCapture(move: Move): Boolean {
-        val targetSquare = board.byCoordinates(move.to)
+    private fun isRegularCapture(move: MoveBits): Boolean {
+        val targetSquare = board[move.to]
         return targetSquare is Square.Occupied
                 && targetSquare.piece.color != state.nextMoveColor
     }
 
-    private fun isPawnAdvance(move: Move): Boolean {
-        val srcSquare = board.byCoordinates(move.from)
+    private fun isPawnAdvance(move: MoveBits): Boolean {
+        val srcSquare = board[move.from]
         val movedPieceType = (srcSquare as Square.Occupied).piece.type
         return movedPieceType == Pawn
     }
 
-    private fun getNewHash(move: Move): Long {
+    private fun getNewHash(move: MoveBits): Long {
+        val from = move.from
+        val to = move.to
+        val promotionPieceType = move.promotionPieceType
         var hash = state.hash
         val moveColor = state.nextMoveColor
-        val fromSquare = board.byCoordinates(move.from)
+        val fromSquare = board[from]
         val movedPiece = (fromSquare as Square.Occupied).piece
         // piece-square
-        hash = hash xor zobrist.getPieceSquareVal(movedPiece, move.from)
-        val toSquare = board.byCoordinates(move.to)
+        hash = hash xor zobrist.getPieceSquareVal(movedPiece, from)
+        val toSquare = board[to]
         if (toSquare is Square.Occupied) {
             val capturedPiece = toSquare.piece
-            hash = hash xor zobrist.getPieceSquareVal(capturedPiece, move.to)
+            hash = hash xor zobrist.getPieceSquareVal(capturedPiece, to)
         }
-        hash = if (move is Promotion) {
-            val promotionPieceType: PromotionPieceType = move.pieceType
+        hash = if (promotionPieceType != null) {
             val pieceType = promotionPieceType.toPieceType()
             val pieceAfterPromotion = Square.Occupied.by(moveColor, pieceType).piece
-            hash xor zobrist.getPieceSquareVal(pieceAfterPromotion, move.to)
+            hash xor zobrist.getPieceSquareVal(pieceAfterPromotion, to)
         } else {
-            hash xor zobrist.getPieceSquareVal(movedPiece, move.to)
+            hash xor zobrist.getPieceSquareVal(movedPiece, to)
         }
         if (isCaptureByEnPassant(move)) {
-            val capturedPawnColor = state.enPassantSquares.getColorByEnPassantSquare(move.to)!!
-            val capturedPawnCoords = move.to.offset(capturedPawnColor.pawnForwardVector)
+            val capturedPawnColor = state.enPassantSquares.getColorByEnPassantSquare(to)!!
+            val capturedPawnSquareIndex = offsetSquareBy(to, capturedPawnColor.pawnForwardOffset)
             val piece = Square.Occupied.by(capturedPawnColor, Pawn).piece
-            hash = hash xor zobrist.getPieceSquareVal(piece, capturedPawnCoords)
+            hash = hash xor zobrist.getPieceSquareVal(piece, capturedPawnSquareIndex)
         }
         val castling = getCastling(move)
         if (castling != null) {
-            val oldRookCoords = getRookCoordinatesBeforeCastling(moveColor, castling)
-            val newRookCoords = getRookCoordinatesAfterCastling(moveColor, castling)
+            val oldRookSquareIndex = rookSquareBeforeCastling[moveColor.ordinal][castling.ordinal]
+            val newRookCoords = rookSquareAfterCastling[moveColor.ordinal][castling.ordinal]
             val piece = Square.Occupied.by(moveColor, Rook).piece
-            hash = hash xor zobrist.getPieceSquareVal(piece, oldRookCoords)
+            hash = hash xor zobrist.getPieceSquareVal(piece, oldRookSquareIndex)
             hash = hash xor zobrist.getPieceSquareVal(piece, newRookCoords)
         }
         // next move color
@@ -508,9 +607,9 @@ internal class Position(fenState: FenState) {
         val newCastlingOptions: Set<Castling> = when {
             castling != null || movedPiece.type == King ->
                 castlingOptionsNone
-            movedPiece.type == Rook && move.from == getRookCoordinatesBeforeCastling(moveColor, KingSide) ->
+            movedPiece.type == Rook && from == rookSquareBeforeCastling[moveColor.ordinal][KingSide.ordinal] ->
                 state.castlingOptions.dropCastlingForColor(moveColor, KingSide)[moveColor]
-            movedPiece.type == Rook && move.from == getRookCoordinatesBeforeCastling(moveColor, QueenSide) ->
+            movedPiece.type == Rook && from == rookSquareBeforeCastling[moveColor.ordinal][QueenSide.ordinal] ->
                 state.castlingOptions.dropCastlingForColor(moveColor, QueenSide)[moveColor]
             else -> oldCastlingOptions
         }
@@ -519,22 +618,22 @@ internal class Position(fenState: FenState) {
             hash = hash xor zobrist.getCastlingOptionsValue(moveColor, newCastlingOptions)
         }
         // en passant squares
-        Color.values().forEach { color ->
+        allColors.forEach { color ->
             if (moveColor == color) {
-                val enPassantSquare = state.enPassantSquares.getEnPassantSquareByColor(color)
-                if (enPassantSquare != null) {
-                    hash = hash xor zobrist.getEnPassantVal(color, enPassantSquare)
+                val enPassantSquareIndex = state.enPassantSquares.getEnPassantSquareByColor(color)
+                if (enPassantSquareIndex != NULL_SQUARE) {
+                    hash = hash xor zobrist.getEnPassantVal(color, enPassantSquareIndex)
                 }
-                if (movedPiece.type == Pawn && move.from.offset(color.pawnForwardVector, 2) == move.to) {
-                    val newEnPassantSquare = move.from.offset(color.pawnForwardVector)
-                    hash = hash xor zobrist.getEnPassantVal(color, newEnPassantSquare)
+                if (movedPiece.type == Pawn && offsetSquareBy(from, 2 * color.pawnForwardOffset) == to) {
+                    val newEnPassantSquareIndex = offsetSquareBy(from, color.pawnForwardOffset)
+                    hash = hash xor zobrist.getEnPassantVal(color, newEnPassantSquareIndex)
                 }
             } else {
-                val enPassantSquare = state.enPassantSquares.getEnPassantSquareByColor(color)
-                if (enPassantSquare != null) {
-                    val pawnSquare = enPassantSquare.offset(color.pawnForwardVector)
-                    if (move.to == enPassantSquare || pawnSquare == move.to) {
-                        hash = hash xor zobrist.getEnPassantVal(color, enPassantSquare)
+                val enPassantSquareIndex = state.enPassantSquares.getEnPassantSquareByColor(color)
+                if (enPassantSquareIndex != NULL_SQUARE) {
+                    val pawnSquare = offsetSquareBy(enPassantSquareIndex, color.pawnForwardOffset)
+                    if (to == enPassantSquareIndex || pawnSquare == to) {
+                        hash = hash xor zobrist.getEnPassantVal(color, enPassantSquareIndex)
                     }
                 }
             }
@@ -547,9 +646,9 @@ internal class Position(fenState: FenState) {
 
         hash = hash xor zobrist.getEliminatedColorValue(eliminatedColor)
 
-        val enPassantSquare = state.enPassantSquares.getEnPassantSquareByColor(eliminatedColor)
-        if (enPassantSquare != null) {
-            hash = hash xor zobrist.getEnPassantVal(eliminatedColor, enPassantSquare)
+        val enPassantSquareIndex = state.enPassantSquares.getEnPassantSquareByColor(eliminatedColor)
+        if (enPassantSquareIndex != NULL_SQUARE) {
+            hash = hash xor zobrist.getEnPassantVal(eliminatedColor, enPassantSquareIndex)
         }
 
         val newColor = newNextMoveColor(state.nextMoveColor)
@@ -560,298 +659,308 @@ internal class Position(fenState: FenState) {
         return hash
     }
 
-    private fun hashState(fenState: FenState): Long {
-        var hash = 0L
-        fenState.board.forEachIndexed { rank, row ->
-            row.forEachIndexed { file, square ->
-                if (square is Square.Occupied) {
-                    val piece = square.piece
-                    val coords = Coordinates.ofFileAndRank(file, rank)
-                    hash = hash xor zobrist.getPieceSquareVal(piece, coords)
-                }
+    private fun checkAttackVectors() {
+        for (i in allColors.indices) {
+            for (j in 0 until BOARD_SIZE * BOARD_SIZE) {
+                attackedSquares[i][j] = false
             }
-        }
-        hash = hash xor zobrist.getNextMoveColorVal(fenState.nextMoveColor)
-        Color.values().forEach { color ->
-            hash = hash xor zobrist.getCastlingOptionsValue(color, fenState.castlingOptions[color]
-                    ?: castlingOptionsNone)
-        }
-        Color.values().forEach { color ->
-            val enPassantSqrCoords = fenState.enPassantSquares[color]
-            if (enPassantSqrCoords != null) {
-                hash = hash xor zobrist.getEnPassantVal(color, enPassantSqrCoords)
-            }
-        }
-        return hash
-    }
-
-    private fun computeStateFeatures() {
-        for (i in Color.values().indices) {
-            attackedSquares[i].clear()
+            scannedSquaresBehindKing[i].clear()
             pins[i].clear()
             checks[i].clear()
         }
 
-        Color.values().forEach { color ->
+        allColors.forEach { color ->
             if (!state.eliminatedColors.isEliminated(color)) {
-                PieceType.values().forEach { pieceType ->
-                    pieceLists[color.ordinal][pieceType.ordinal].forEach { coords ->
-                        findChecks(
-                                checkingPieceCoords = coords,
-                                checkingPieceColor = color,
-                                checkingPieceType = pieceType
-                        )
-                        getAttackedCoordinates(
-                                pieceCoords = coords,
-                                pieceColor = color,
-                                pieceType = pieceType
-                        )
-                        findPins(
-                                pinningPieceCoords = coords,
-                                pinningPieceType = pieceType,
-                                pinningPieceColor = color
-                        )
+
+                pieceLists[color.ordinal][Pawn.ordinal].forEachDo { squareIndex ->
+                    pawnAttackOffsets[color.ordinal].forEach { offset ->
+                        checkAttackVector(squareIndex, color, offset)
+                    }
+                }
+
+                pieceLists[color.ordinal][Knight.ordinal].forEachDo { squareIndex ->
+                    knightMoveOffsets.forEach { offset ->
+                        checkAttackVector(squareIndex, color, offset)
+                    }
+                }
+
+                pieceLists[color.ordinal][King.ordinal].forEachDo { squareIndex ->
+                    allDirectionsOffsets.forEach { offset ->
+                        checkAttackVector(squareIndex, color, offset)
+                    }
+                }
+
+                pieceLists[color.ordinal][Bishop.ordinal].forEachDo { squareIndex ->
+                    bishopMoveOffsets.forEach { offset ->
+                        checkSlidingAttackVector(squareIndex, color, offset)
+                    }
+                }
+
+                pieceLists[color.ordinal][Rook.ordinal].forEachDo { squareIndex ->
+                    rookMoveOffsets.forEach { offset ->
+                        checkSlidingAttackVector(squareIndex, color, offset)
+                    }
+                }
+
+                pieceLists[color.ordinal][Queen.ordinal].forEachDo { squareIndex ->
+                    allDirectionsOffsets.forEach { offset ->
+                        checkSlidingAttackVector(squareIndex, color, offset)
                     }
                 }
             }
         }
     }
 
-    private fun findChecks(checkingPieceCoords: Coordinates,
-                           checkingPieceColor: Color,
-                           checkingPieceType: PieceType) {
-        when (checkingPieceType) {
-            Pawn -> findChecks(checkingPieceCoords, checkingPieceColor.pawnCapturingVectors, checkingPieceColor)
-            Knight -> findChecks(checkingPieceCoords, knightMoveVectors, checkingPieceColor)
-            Bishop -> findChecksAlongLine(checkingPieceCoords, bishopMoveVectors, checkingPieceColor)
-            Rook -> findChecksAlongLine(checkingPieceCoords, rookMoveVectors, checkingPieceColor)
-            Queen -> findChecksAlongLine(checkingPieceCoords, allDirectionsVectors, checkingPieceColor)
-            King -> {
-            }
-        }
-    }
+    private fun checkAttackVector(attackingSquareIndex: Int,
+                                  color: Color,
+                                  attackOffset: Int) {
+        val attackedSquareIndex = offsetSquareBy(attackingSquareIndex, attackOffset)
+        if (attackedSquareIndex != NULL_SQUARE) {
+            attackedSquares[color.ordinal][attackedSquareIndex] = true
+            val square = board[attackedSquareIndex]
+            if (square is Square.Occupied
+                    && square.piece.type == King
+                    && square.piece.color != color
+                    && !state.eliminatedColors.isEliminated(square.piece.color)) {
+                val check = checkOf(
+                        checkingPieceSquareIndex = attackingSquareIndex,
+                        checkedPieceSquareIndex = attackedSquareIndex
 
-    private fun findChecks(checkingPieceCoords: Coordinates,
-                           attackVectors: List<Vector>,
-                           checkingPieceColor: Color) {
-        attackVectors.forEach { vector ->
-            val attackedCoords = checkingPieceCoords.offsetOrNull(vector)
-            if (attackedCoords != null) {
-                addCheckIfPresent(
-                        pieceCoords = checkingPieceCoords,
-                        pieceColor = checkingPieceColor,
-                        attackedCoordinates = attackedCoords
                 )
+                checks[square.piece.color.ordinal].add(check)
             }
         }
     }
 
-    private fun findChecksAlongLine(checkingPieceCoords: Coordinates,
-                                    attackUnitVectors: List<Vector>,
-                                    checkingPieceColor: Color) {
-        attackUnitVectors.forEach { vector ->
-            val lastCoords = traverseSquares(
-                    startingCoordinates = checkingPieceCoords,
-                    vector = vector,
-                    isEndReached = { coords -> board.byCoordinates(coords) is Square.Occupied }
-            )
-            addCheckIfPresent(
-                    pieceCoords = checkingPieceCoords,
-                    pieceColor = checkingPieceColor,
-                    attackedCoordinates = lastCoords
-            )
-        }
-    }
-
-    private fun addCheckIfPresent(pieceCoords: Coordinates,
-                                  pieceColor: Color,
-                                  attackedCoordinates: Coordinates) {
-        val attackedSquare = board.byCoordinates(attackedCoordinates)
-        if (attackedSquare is Square.Occupied
-                && attackedSquare.piece.type == King
-                && attackedSquare.piece.color != pieceColor
-                && !state.eliminatedColors.isEliminated(attackedSquare.piece.color)) {
-            val check = Check(
-                    checkingPieceCoordinates = pieceCoords,
-                    checkedKingCoordinates = attackedCoordinates
-            )
-            checks[attackedSquare.piece.color.ordinal].add(check)
-        }
-    }
-
-    private fun getAttackedCoordinates(pieceCoords: Coordinates,
-                                       pieceColor: Color,
-                                       pieceType: PieceType) {
-        when (pieceType) {
-            Pawn -> getAttackedCoordinates(pieceCoords, pieceColor, pieceColor.pawnCapturingVectors)
-            Knight -> getAttackedCoordinates(pieceCoords, pieceColor, knightMoveVectors)
-            Bishop -> getAttackedCoordinatesAlongLine(pieceCoords, pieceColor, bishopMoveVectors)
-            Rook -> getAttackedCoordinatesAlongLine(pieceCoords, pieceColor, rookMoveVectors)
-            Queen -> getAttackedCoordinatesAlongLine(pieceCoords, pieceColor, allDirectionsVectors)
-            King -> getAttackedCoordinates(pieceCoords, pieceColor, allDirectionsVectors)
-        }
-    }
-
-    private fun getAttackedCoordinates(pieceCoords: Coordinates,
-                                       pieceColor: Color,
-                                       attackVectors: List<Vector>) {
-        attackVectors.forEach { vector ->
-            val attackedCoords = pieceCoords.offsetOrNull(vector)
-            if (attackedCoords != null) {
-                attackedSquares[pieceColor.ordinal].add(attackedCoords)
-            }
-        }
-    }
-
-
-    private fun getAttackedCoordinatesAlongLine(pieceCoords: Coordinates,
-                                                pieceColor: Color,
-                                                attackingUnitVectors: List<Vector>) {
-        attackingUnitVectors.forEach { vector ->
-            traverseSquares(
-                    startingCoordinates = pieceCoords,
-                    vector = vector,
-                    forEachDo = { coords ->
-                        attackedSquares[pieceColor.ordinal].add(coords)
-                    },
-                    isEndReached = { coords ->
-                        when (val square = board.byCoordinates(coords)) {
-                            is Square.Empty -> false
-                            is Square.Occupied -> square.piece.type != King || square.piece.color == pieceColor
+    private fun checkSlidingAttackVector(attackingSquareIndex: Int, color: Color, attackOffset: Int) {
+        var squareIndex = attackingSquareIndex
+        while (true) {
+            squareIndex = offsetSquareBy(squareIndex, attackOffset)
+            if (squareIndex == NULL_SQUARE)
+                break
+            attackedSquares[color.ordinal][squareIndex] = true
+            val attackedSquare = board[squareIndex]
+            if (attackedSquare is Square.Occupied) {
+                if (attackedSquare.piece.color != color && !state.eliminatedColors.isEliminated(attackedSquare.piece.color)) {
+                    if (attackedSquare.piece.type == King) {
+                        val check = checkOf(
+                                checkingPieceSquareIndex = attackingSquareIndex,
+                                checkedPieceSquareIndex = squareIndex
+                        )
+                        checks[attackedSquare.piece.color.ordinal].add(check)
+                        while (true) {
+                            squareIndex = offsetSquareBy(squareIndex, attackOffset)
+                            if (squareIndex == NULL_SQUARE) {
+                                break
+                            }
+                            scannedSquaresBehindKing[attackedSquare.piece.color.ordinal].add(squareIndex)
+                            val scannedSquare = board[squareIndex]
+                            if (scannedSquare is Square.Occupied) {
+                                break
+                            }
+                        }
+                    } else {
+                        val attackedSquareIndex = squareIndex
+                        while (true) {
+                            squareIndex = offsetSquareBy(squareIndex, attackOffset)
+                            if (squareIndex == NULL_SQUARE) {
+                                break
+                            }
+                            val scannedSquare = board[squareIndex]
+                            if (scannedSquare is Square.Occupied) {
+                                if (scannedSquare.piece.type == King && scannedSquare.piece.color == attackedSquare.piece.color) {
+                                    val pin = pinOf(
+                                            pinningPieceSquareIndex = attackingSquareIndex,
+                                            pinnedPieceSquareIndex = attackedSquareIndex
+                                    )
+                                    pins[attackedSquare.piece.color.ordinal].add(pin)
+                                }
+                                break
+                            }
                         }
                     }
-            )
-        }
-
-    }
-
-    private fun findPins(pinningPieceCoords: Coordinates,
-                         pinningPieceType: PieceType,
-                         pinningPieceColor: Color) {
-        when (pinningPieceType) {
-            Bishop -> findPins(pinningPieceCoords, bishopMoveVectors, pinningPieceColor)
-            Rook -> findPins(pinningPieceCoords, rookMoveVectors, pinningPieceColor)
-            Queen -> findPins(pinningPieceCoords, allDirectionsVectors, pinningPieceColor)
-            else -> {
-            }
-        }
-    }
-
-    private fun findPins(pinningPieceCoords: Coordinates,
-                         attackUnitVectors: List<Vector>,
-                         pinningPieceColor: Color) {
-        attackUnitVectors.forEach { vector ->
-            val lastAttackedCoords = traverseSquares(
-                    startingCoordinates = pinningPieceCoords,
-                    vector = vector,
-                    isEndReached = { coords -> board.byCoordinates(coords) is Square.Occupied }
-            )
-            val lastAttackedSquare = board.byCoordinates(lastAttackedCoords)
-            if (lastAttackedSquare is Square.Occupied
-                    && lastAttackedSquare.piece.color != pinningPieceColor
-                    && lastAttackedSquare.piece.type != King
-                    && !state.eliminatedColors.isEliminated(lastAttackedSquare.piece.color)) {
-                val lastScannedCoords = traverseSquares(
-                        startingCoordinates = lastAttackedCoords,
-                        vector = vector,
-                        isEndReached = { coords -> board.byCoordinates(coords) is Square.Occupied }
-                )
-                val lastScannedSquare = board.byCoordinates(lastScannedCoords)
-                if (lastScannedSquare is Square.Occupied
-                        && lastScannedSquare.piece.type == King
-                        && lastScannedSquare.piece.color == lastAttackedSquare.piece.color) {
-                    val pin = Pin(
-                            pinningPieceCoordinates = pinningPieceCoords,
-                            pinnedPieceCoordinates = lastAttackedCoords
-                    )
-                    pins[lastAttackedSquare.piece.color.ordinal].add(pin)
                 }
-            }
-        }
-    }
-
-    private inline fun traverseSquares(
-            startingCoordinates: Coordinates,
-            vector: Vector,
-            forEachDo: (Coordinates) -> Unit = {},
-            isEndReached: (Coordinates) -> Boolean): Coordinates {
-        var lastCoords = startingCoordinates
-        while (true) {
-            val newCoords = lastCoords.offsetOrNull(vector) ?: break
-            lastCoords = newCoords
-            forEachDo(newCoords)
-            if (isEndReached(newCoords))
                 break
+            }
         }
-        return lastCoords
     }
 
-    private fun genLegalMoves() {
+    private fun generateLegalMoves() {
         legalMoves.clear()
-        PieceType.values().forEach { pieceType ->
-            pieceLists[state.nextMoveColor.ordinal][pieceType.ordinal].forEach { coords ->
-                when (pieceType) {
-                    Pawn -> genPawnLegalMoves(coords)
-                    Knight -> genKnightMoves(coords)
-                    Bishop -> genBishopMoves(coords)
-                    Rook -> genRookMoves(coords)
-                    Queen -> genQueenMoves(coords)
-                    King -> genKingPseudoMoves(coords)
+
+        pieceLists[state.nextMoveColor.ordinal][Pawn.ordinal].forEachDo { squareIndex ->
+            generatePawnMoves(squareIndex)
+        }
+
+        pieceLists[state.nextMoveColor.ordinal][Knight.ordinal].forEachDo { squareIndex ->
+            generateKnightMoves(squareIndex)
+        }
+
+        pieceLists[state.nextMoveColor.ordinal][Bishop.ordinal].forEachDo { squareIndex ->
+            generateBishopMoves(squareIndex)
+        }
+
+        pieceLists[state.nextMoveColor.ordinal][Rook.ordinal].forEachDo { squareIndex ->
+            generateRookMoves(squareIndex)
+        }
+
+        pieceLists[state.nextMoveColor.ordinal][Queen.ordinal].forEachDo { squareIndex ->
+            generateQueenMoves(squareIndex)
+        }
+
+        pieceLists[state.nextMoveColor.ordinal][King.ordinal].forEachDo { squareIndex ->
+            generateKingMoves(squareIndex)
+        }
+    }
+
+    private fun generateMove(from: Int, to: Int) {
+        val toSquare = board[to]
+        if (toSquare is Square.Empty
+                || (toSquare is Square.Occupied && toSquare.piece.color != state.nextMoveColor)) {
+            addMoveIfLegal(from, to)
+        }
+    }
+
+    private fun addMoveIfLegal(from: Int, to: Int) {
+        if (isLegalMove(from, to)) {
+            val move = moveOf(from, to)
+            legalMoves.add(move)
+        }
+    }
+
+    private fun generatePawnMoves(squareIndex: Int) {
+        val pawnColor = state.nextMoveColor
+        val forwardOffset = pawnColor.pawnForwardOffset
+        val oneSquareForwardIndex = offsetSquareBy(squareIndex, forwardOffset)
+        if (oneSquareForwardIndex != NULL_SQUARE) {
+            val oneSquareForward = board[oneSquareForwardIndex]
+            if (oneSquareForward is Square.Empty) {
+                generatePawnMoves(from = squareIndex, to = oneSquareForwardIndex)
+                if (isSquareOnStartingPawnRowForColor(squareIndex, pawnColor)) {
+                    val twoSquaresForwardIndex = offsetSquareBy(oneSquareForwardIndex, forwardOffset)
+                    if (twoSquaresForwardIndex != NULL_SQUARE) {
+                        val twoSquaresForward = board[twoSquaresForwardIndex]
+                        if (twoSquaresForward is Square.Empty) {
+                            addMoveIfLegal(
+                                    from = squareIndex,
+                                    to = twoSquaresForwardIndex
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        pawnAttackOffsets[pawnColor.ordinal].forEach { offset ->
+            val attackedSquareIndex = offsetSquareBy(squareIndex, offset)
+            if (attackedSquareIndex != NULL_SQUARE) {
+                val attackedSquare = board[attackedSquareIndex]
+                if (attackedSquare is Square.Occupied && attackedSquare.piece.color != pawnColor) {
+                    generatePawnMoves(from = squareIndex, to = attackedSquareIndex)
+                } else {
+                    val isCaptureByEnPassant = state.enPassantSquares.getColorByEnPassantSquare(attackedSquareIndex)
+                            ?.let { it != pawnColor }
+                            ?: false
+                    if (isCaptureByEnPassant) {
+                        generatePawnMoves(from = squareIndex, to = attackedSquareIndex)
+                    }
                 }
             }
         }
     }
 
-    private fun addMoveIfLegal(from: Coordinates, to: Coordinates) {
+    private fun generatePawnMoves(from: Int, to: Int) {
         if (isLegalMove(from, to)) {
-            val move = RegularMove(from, to)
-            legalMoves.add(move)
-        }
-    }
-
-    private fun addPawnMoveIfLegal(from: Coordinates, to: Coordinates, promotionPieceType: PromotionPieceType?) {
-        if (isLegalMove(from, to)) {
-            val move = when (promotionPieceType) {
-                null -> RegularMove(from, to)
-                else -> Promotion(from, to, promotionPieceType)
+            val isPromotion = isPromotionSquareForColor(to, state.nextMoveColor)
+            if (isPromotion) {
+                PromotionPieceType.values().forEach { promotionPieceType ->
+                    val move = moveOf(from, to, promotionPieceType)
+                    legalMoves.add(move)
+                }
+            } else {
+                val move = moveOf(from, to)
+                legalMoves.add(move)
             }
+        }
+    }
+
+    private fun generateKnightMoves(squareIndex: Int) {
+        knightMoveOffsets.forEach { offset ->
+            val destinationSquareIndex = offsetSquareBy(squareIndex, offset)
+            if (destinationSquareIndex != NULL_SQUARE) {
+                generateMove(from = squareIndex, to = destinationSquareIndex)
+            }
+        }
+    }
+
+    private fun generateBishopMoves(squareIndex: Int) {
+        bishopMoveOffsets.forEach { offset ->
+            generateSlidingMoves(squareIndex, offset)
+        }
+    }
+
+    private fun generateRookMoves(squareIndex: Int) {
+        rookMoveOffsets.forEach { offset ->
+            generateSlidingMoves(squareIndex, offset)
+        }
+    }
+
+    private fun generateQueenMoves(squareIndex: Int) {
+        allDirectionsOffsets.forEach { offset ->
+            generateSlidingMoves(squareIndex, offset)
+        }
+    }
+
+    private fun generateSlidingMoves(squareIndex: Int, offset: Int) {
+        var currSquareIndex = squareIndex
+        while (true) {
+            currSquareIndex = offsetSquareBy(currSquareIndex, offset)
+            if (currSquareIndex == NULL_SQUARE) {
+                break
+            }
+            val square = board[currSquareIndex]
+            if (square is Square.Empty) {
+                addMoveIfLegal(from = squareIndex, to = currSquareIndex)
+            }
+            if (square is Square.Occupied) {
+                if (square.piece.color != state.nextMoveColor) {
+                    addMoveIfLegal(from = squareIndex, to = currSquareIndex)
+                }
+                break
+            }
+        }
+    }
+
+    private fun addKingMoveIfLegal(from: Int,
+                                   to: Int,
+                                   castling: Castling? = null) {
+        if (isLegalKingMove(from, to, castling)) {
+            val move = moveOf(from, to)
             legalMoves.add(move)
         }
     }
 
-    private fun addKingMoveIfLegal(from: Coordinates,
-                                   to: Coordinates,
-                                   isKingSideCastling: Boolean = false,
-                                   isQueenSideCastling: Boolean = false) {
-        if (isLegalKingMove(from, to, isKingSideCastling, isQueenSideCastling)) {
-            val move = RegularMove(from, to)
-            legalMoves.add(move)
-        }
-    }
-
-    private fun isLegalKingMove(from: Coordinates,
-                                to: Coordinates,
-                                isKingSideCastling: Boolean,
-                                isQueenSideCastling: Boolean): Boolean {
+    private fun isLegalKingMove(from: Int,
+                                to: Int,
+                                castling: Castling?): Boolean {
         val color = state.nextMoveColor
-        val isDestinationAttacked = isSquareAttackedByOtherColors(color, to)
+        val isCheck = checks[color.ordinal].size() > 0
+        val isDestinationAttacked = isSquareAttackedByOtherColors(color, to) || (isCheck && this.scannedSquaresBehindKing[color.ordinal].contains(to))
         if (isDestinationAttacked) {
             return false
         }
-        if (isKingSideCastling || isQueenSideCastling) {
-            val isChecked = checks[color.ordinal].isNotEmpty()
-            if (isChecked) {
+        if (castling != null) {
+            if (isCheck) {
                 return false
             }
-            if (isKingSideCastling) {
-                val newRookSquare = from.offset(color.kingSideVector)
+            if (castling == KingSide) {
+                val newRookSquare = rookSquareAfterCastling[color.ordinal][KingSide.ordinal]
                 val isNewRookSquareAttacked = isSquareAttackedByOtherColors(color, newRookSquare)
                 if (isNewRookSquareAttacked) {
                     return false
                 }
             }
-            if (isQueenSideCastling) {
-                val newRookSquare = from.offset(color.queenSideVector)
+            if (castling == QueenSide) {
+                val newRookSquare = rookSquareAfterCastling[color.ordinal][QueenSide.ordinal]
                 val isNewRookSquareAttacked = isSquareAttackedByOtherColors(color, newRookSquare)
                 if (isNewRookSquareAttacked) {
                     return false
@@ -861,43 +970,45 @@ internal class Position(fenState: FenState) {
         return true
     }
 
-    private fun isSquareAttackedByOtherColors(color: Color, coords: Coordinates) =
-            Color.values().any { it != color && coords in attackedSquares[it.ordinal] }
+    private fun isSquareAttackedByOtherColors(color: Color, index: Int) =
+            allColors.any { it != color && attackedSquares[it.ordinal][index] }
 
-    private fun isLegalMove(from: Coordinates, to: Coordinates): Boolean {
+    private fun isLegalMove(from: Int, to: Int): Boolean {
         val color = state.nextMoveColor
 
         val pinsAgainstColor = pins[color.ordinal]
         val isMovePlacingKingInCheck = pinsAgainstColor.any { pin ->
-            from == pin.pinnedPieceCoordinates
-                    && !to.isOnLineBetween(pin.pinnedPieceCoordinates, pin.pinningPieceCoordinates)
-                    && to != pin.pinningPieceCoordinates
+            val pinnedSquareIndex = pin.pinnedPieceSquareIndex
+            val pinningSquareIndex = pin.pinningPieceSquareIndex
+            from == pinnedSquareIndex
+                    && !isSquareOnLineBetween(to, pinnedSquareIndex, pinningSquareIndex)
+                    && to != pinningSquareIndex
         }
         if (isMovePlacingKingInCheck) {
             return false
         }
 
         val checksAgainstColor = checks[color.ordinal]
-        if (checksAgainstColor.count() > 1) {
+        if (checksAgainstColor.size() > 1) {
             return false
         }
-        if (checksAgainstColor.isNotEmpty()) {
+        if (checksAgainstColor.size() > 0) {
             val check = checksAgainstColor[0]
-            val checkingCoords = check.checkingPieceCoordinates
-            val checkedCoords = check.checkedKingCoordinates
+            val checkingSquareIndex = check.checkingPieceSquareIndex
+            val checkedSquareIndex = check.checkedPieceSquareIndex
             val isPossibleToBlock = when {
-                (board.byCoordinates(checkingCoords) as Square.Occupied).piece.type == Knight -> false
-                checkingCoords.isAdjacentTo(checkedCoords) -> false
+                (board[checkedSquareIndex] as Square.Occupied).piece.type == Knight -> false
+                areSquaresAdjacent(checkingSquareIndex, checkedSquareIndex) -> false
                 else -> true
             }
-            val isBlockingMove = isPossibleToBlock && to.isOnLineBetween(checkedCoords, checkingCoords)
-            val isCapturingCheckingPieceMove = to == checkingCoords
+            val isBlockingMove = isPossibleToBlock && isSquareOnLineBetween(to, checkedSquareIndex, checkingSquareIndex)
+            val isCapturingCheckingPieceMove = to == checkingSquareIndex
             if (!isCapturingCheckingPieceMove && !isBlockingMove) {
                 return false
             }
         }
 
-        val toSquare = board.byCoordinates(to)
+        val toSquare = board[to]
         val isOccupiedByNotEliminatedKing = toSquare is Square.Occupied
                 && toSquare.piece.type == King
                 && !state.eliminatedColors.isEliminated(toSquare.piece.color)
@@ -909,119 +1020,28 @@ internal class Position(fenState: FenState) {
         return true
     }
 
-
-    private fun genPawnLegalMoves(pawnCoords: Coordinates) {
-        pawnCoords.offsetOrNull(state.nextMoveColor.pawnForwardVector)
-                ?.takeIf { coords -> board.byCoordinates(coords) == Square.Empty }
-                ?.let { newCoords -> genPawnLegalMoves(from = pawnCoords, to = newCoords) }
-        pawnCoords.takeIf { pawnCoords.isOnPawnStartingRowForColor(state.nextMoveColor) }
-                ?.offsetOrNull(state.nextMoveColor.pawnForwardVector)
-                ?.takeIf { coords -> board.byCoordinates(coords) == Square.Empty }
-                ?.offsetOrNull(state.nextMoveColor.pawnForwardVector)
-                ?.takeIf { coords -> board.byCoordinates(coords) == Square.Empty }
-                ?.let { newCords -> addPawnMoveIfLegal(from = pawnCoords, to = newCords, promotionPieceType = null) }
-        state.nextMoveColor.pawnCapturingVectors
-                .forEach { vector ->
-                    val captureCoords = pawnCoords.offsetOrNull(vector) ?: return@forEach
-                    captureCoords.takeIf { coords ->
-                        when (val square = board.byCoordinates(coords)) {
-                            is Square.Occupied -> square.piece.color != state.nextMoveColor
-                            is Square.Empty -> false
-                        }
-                    }
-                            ?.let { coords -> genPawnLegalMoves(from = pawnCoords, to = coords) }
-
-                    captureCoords.takeIf { coords ->
-                        state.enPassantSquares.getColorByEnPassantSquare(coords)
-                                ?.let { it != state.nextMoveColor }
-                                ?: false
-                    }
-                            ?.let { coords -> genPawnLegalMoves(from = pawnCoords, to = coords) }
-                }
-    }
-
-    private fun genPawnLegalMoves(from: Coordinates, to: Coordinates) {
-        val isPromotion = to.isPromotionSquareForColor(state.nextMoveColor)
-        if (isPromotion) {
-            PromotionPieceType.values().forEach { promotionPieceType ->
-                addPawnMoveIfLegal(from, to, promotionPieceType)
-            }
-        } else {
-            addPawnMoveIfLegal(from, to, promotionPieceType = null)
-        }
-    }
-
-    private fun genKnightMoves(coordinates: Coordinates) {
-        knightMoveVectors.forEach { vector ->
-            val newCoords = coordinates.offsetOrNull(vector) ?: return@forEach
-            val square = board.byCoordinates(newCoords)
-            if (square is Square.Empty || (square is Square.Occupied && square.piece.color != state.nextMoveColor)) {
-                addMoveIfLegal(from = coordinates, to = newCoords)
-            }
-        }
-    }
-
-    private fun genBishopMoves(coordinates: Coordinates) {
-        bishopMoveVectors.forEach { vector -> genMovesOnLine(coordinates, vector) }
-    }
-
-    private fun genRookMoves(coordinates: Coordinates) {
-        rookMoveVectors.forEach { vector -> genMovesOnLine(coordinates, vector) }
-    }
-
-    private fun genQueenMoves(coordinates: Coordinates) {
-        allDirectionsVectors.forEach { vector ->
-            genMovesOnLine(coordinates, vector)
-        }
-    }
-
-    private fun genKingPseudoMoves(coordinates: Coordinates) {
+    private fun generateKingMoves(squareIndex: Int) {
         val color = state.nextMoveColor
-        val kingSideVector = color.kingSideVector
-        coordinates.offsetOrNull(kingSideVector)
-                ?.takeIf { KingSide in state.castlingOptions[color] }
-                ?.takeIf { newRookCoords -> board.byCoordinates(newRookCoords) == Square.Empty }
-                ?.offsetOrNull(kingSideVector)
-                ?.takeIf { newKingCoords -> board.byCoordinates(newKingCoords) == Square.Empty }
-                ?.let { newKingCoords ->
-                    addKingMoveIfLegal(from = coordinates, to = newKingCoords, isKingSideCastling = true)
-                }
-        val queenSideVector = color.queenSideVector
-        coordinates.offsetOrNull(queenSideVector)
-                ?.takeIf { QueenSide in state.castlingOptions[color] }
-                ?.takeIf { newRookCoords -> board.byCoordinates(newRookCoords) == Square.Empty }
-                ?.offsetOrNull(queenSideVector)
-                ?.takeIf { newKingCoords -> board.byCoordinates(newKingCoords) == Square.Empty }
-                ?.let { newKingCoords ->
-                    addKingMoveIfLegal(from = coordinates, to = newKingCoords, isQueenSideCastling = true)
-                }
-        allDirectionsVectors
-                .forEach { vector ->
-                    val newCoords = coordinates.offsetOrNull(vector) ?: return@forEach
-                    val square = board.byCoordinates(newCoords)
-                    if (square is Square.Empty || (square is Square.Occupied && square.piece.color != state.nextMoveColor)) {
-                        addKingMoveIfLegal(from = coordinates, to = newCoords)
-                    }
-                }
-    }
-
-    private fun genMovesOnLine(coordinates: Coordinates, vector: Vector) {
-        var lastCoords = coordinates
-        var endReached = false
-        while (!endReached) {
-            val newCoords = lastCoords.offsetOrNull(vector) ?: break
-            when (val square = board.byCoordinates(newCoords)) {
-                is Square.Occupied -> {
-                    endReached = true
-                    if (square.piece.color != state.nextMoveColor) {
-                        addMoveIfLegal(from = coordinates, to = newCoords)
-                    }
-                }
-                is Square.Empty -> {
-                    addMoveIfLegal(from = coordinates, to = newCoords)
+        val castlingOptions = state.castlingOptions[color]
+        allCastlings.forEach { castling ->
+            if (castling in castlingOptions) {
+                val offset = castlingSideOffsets[color.ordinal][castling.ordinal]
+                val newRookSquareIndex = offsetSquareBy(squareIndex, offset)
+                val newKingSquareIndex = offsetSquareBy(newRookSquareIndex, offset)
+                if (board[newRookSquareIndex] == Square.Empty && board[newKingSquareIndex] == Square.Empty) {
+                    addKingMoveIfLegal(from = squareIndex, to = newKingSquareIndex, castling = castling)
                 }
             }
-            lastCoords = newCoords
+        }
+        allDirectionsOffsets.forEach { offset ->
+            val targetSquareIndex = offsetSquareBy(squareIndex, offset)
+            if (targetSquareIndex != NULL_SQUARE) {
+                val square = board[targetSquareIndex]
+                if (square == Square.Empty
+                        || (square is Square.Occupied && square.piece.color != state.nextMoveColor)) {
+                    addKingMoveIfLegal(from = squareIndex, to = targetSquareIndex)
+                }
+            }
         }
     }
 }

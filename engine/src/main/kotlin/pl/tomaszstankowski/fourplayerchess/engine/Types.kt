@@ -1,31 +1,28 @@
 package pl.tomaszstankowski.fourplayerchess.engine
 
-import com.github.h0tk3y.betterParse.combinators.and
-import com.github.h0tk3y.betterParse.combinators.map
-import com.github.h0tk3y.betterParse.grammar.Grammar
-import com.github.h0tk3y.betterParse.grammar.tryParseToEnd
-import com.github.h0tk3y.betterParse.parser.Parsed
-import com.github.h0tk3y.betterParse.parser.Parser
+import gnu.trove.list.linked.TIntLinkedList
 import pl.tomaszstankowski.fourplayerchess.engine.Castling.KingSide
 import pl.tomaszstankowski.fourplayerchess.engine.Castling.QueenSide
 import pl.tomaszstankowski.fourplayerchess.engine.Color.*
-import java.util.*
 
 enum class Color {
     Red, Blue, Yellow, Green
 }
 
+internal val allColors = Color.values()
+
 enum class Castling {
     KingSide, QueenSide
 }
 
-private fun Castling.binary(color: Color): Int {
-    val base = when (this) {
-        KingSide -> 1
-        QueenSide -> 2
-    }
-    return base shl (color.ordinal * 2)
-}
+internal val allCastlings = Castling.values()
+
+private val castlingBit = arrayOf(
+        intArrayOf(1, 2),
+        intArrayOf(4, 8),
+        intArrayOf(16, 32),
+        intArrayOf(64, 128)
+)
 
 internal typealias CastlingOptionsBits = Int
 
@@ -35,26 +32,27 @@ internal val castlingOptionsKingSide = setOf(KingSide)
 internal val castlingOptionsQueenSide = setOf(QueenSide)
 
 internal operator fun CastlingOptionsBits.get(color: Color): Set<Castling> {
-    val kingSideBinary = KingSide.binary(color)
-    val queenSideBinary = QueenSide.binary(color)
-    val anySideBinary = kingSideBinary or queenSideBinary
-    if (this and anySideBinary == anySideBinary) {
+    val kingSideBit = castlingBit[color.ordinal][KingSide.ordinal]
+    val queenSideBit = castlingBit[color.ordinal][QueenSide.ordinal]
+    val anySideBits = kingSideBit or queenSideBit
+
+    if (this and anySideBits == anySideBits) {
         return castlingOptionsAny
     }
-    if (this and queenSideBinary == queenSideBinary) {
+    if (this and queenSideBit == queenSideBit) {
         return castlingOptionsQueenSide
     }
-    if (this and kingSideBinary == kingSideBinary) {
+    if (this and kingSideBit == kingSideBit) {
         return castlingOptionsKingSide
     }
     return castlingOptionsNone
 }
 
 internal fun CastlingOptionsBits.withCastlingForColor(color: Color, castling: Castling): CastlingOptionsBits =
-        this or castling.binary(color)
+        this or castlingBit[color.ordinal][castling.ordinal]
 
 internal fun CastlingOptionsBits.dropCastlingForColor(color: Color, castling: Castling): CastlingOptionsBits =
-        (this and castling.binary(color).inv())
+        this and castlingBit[color.ordinal][castling.ordinal].inv()
 
 private const val EMPTY_CASTLING_OPTIONS = 0x00
 
@@ -77,107 +75,33 @@ enum class PieceType {
     Pawn, Knight, Bishop, Rook, Queen, King
 }
 
+internal val allPieceTypes = PieceType.values()
+
 data class Piece internal constructor(val type: PieceType, val color: Color)
-
-data class Coordinates internal constructor(val file: Int, val rank: Int) {
-
-    companion object {
-        private val availableCoordinates: Array<Array<Coordinates?>> = Array(BOARD_SIZE) { arrayOfNulls<Coordinates?>(BOARD_SIZE) }
-        val allCoordinates: List<Coordinates>
-
-        init {
-            for (file in 0 until BOARD_SIZE)
-                for (rank in DISABLED_AREA_SIZE until BOARD_SIZE - DISABLED_AREA_SIZE)
-                    availableCoordinates[file][rank] = Coordinates(file, rank)
-            for (file in DISABLED_AREA_SIZE until BOARD_SIZE - DISABLED_AREA_SIZE)
-                for (rank in 0 until BOARD_SIZE)
-                    availableCoordinates[file][rank] = Coordinates(file, rank)
-            allCoordinates = availableCoordinates.flatten().filterNotNull()
-        }
-
-        private fun ofFileAndRankOrNull(file: Int, rank: Int): Coordinates? {
-            if (file in 0 until BOARD_SIZE && rank in 0 until BOARD_SIZE)
-                return availableCoordinates[file][rank]
-            return null
-        }
-
-        fun ofFileAndRank(file: Int, rank: Int): Coordinates =
-                ofFileAndRankOrNull(file, rank)
-                        ?: throw illegalCoordinatesException(file, rank)
-
-        private fun illegalCoordinatesException(file: Int, rank: Int) =
-                IllegalArgumentException("Coordinates ($file,$rank) are out of board")
-
-        fun parse(str: String): Coordinates =
-                when (val result = CoordinatesGrammar.tryParseToEnd(str)) {
-                    is Parsed -> result.value
-                    else -> throw IllegalArgumentException("Invalid coordinates string: $result")
-                }
-
-        fun parseOrNull(str: String): Coordinates? =
-                when (val result = CoordinatesGrammar.tryParseToEnd(str)) {
-                    is Parsed -> result.value
-                    else -> null
-                }
-
-        private object CoordinatesGrammar : Grammar<Coordinates>() {
-            private val file by token("[a-n]")
-            private val rank by token("1[0-4]|[1-9]")
-
-            private val pFile by file map { tokenMatch -> tokenMatch.text[0] - 'a' }
-            private val pRank by rank map { tokenMatch -> tokenMatch.text.toInt().dec() }
-
-            override val rootParser: Parser<Coordinates>
-                get() = pFile and pRank map { (file, rank) -> ofFileAndRank(file, rank) }
-        }
-    }
-
-    private fun offsetOrNull(fileOffset: Int = 0, rankOffset: Int = 0): Coordinates? {
-        val newFile = file + fileOffset
-        val newRank = rank + rankOffset
-        if (newFile in 0 until BOARD_SIZE && newRank in 0 until BOARD_SIZE)
-            return availableCoordinates[newFile][newRank]
-        return null
-    }
-
-    fun offset(vector: Vector, factor: Int = 1): Coordinates =
-            offsetOrNull(vector, factor) ?: throw illegalCoordinatesException(vector.first, vector.second)
-
-    fun offsetOrNull(vector: Vector, factor: Int = 1): Coordinates? {
-        val fileOffset = vector.first * factor
-        val rankOffset = vector.second * factor
-        return offsetOrNull(fileOffset, rankOffset)
-    }
-
-    override fun toString() = "($file,$rank)"
-
-    fun toHumanReadableString() = "${'a' + file}${rank.inc()}"
-
-}
 
 internal typealias EnPassantSquaresBits = Int
 
-internal fun EnPassantSquaresBits.getEnPassantSquareByColor(color: Color): Coordinates? {
+internal fun EnPassantSquaresBits.getEnPassantSquareByColor(color: Color): Int {
     val bitsForColor = (this shr (8 * color.ordinal)) and 0xff
-    val indexOfBit = bitsForColor.indexOfSingleSetBit()
+    val indexOfBit = bitsForColor.indexOfSingleSetBitOfFirstByte()
     if (indexOfBit == -1) {
-        return null
+        return NULL_SQUARE
     }
     val coord = DISABLED_AREA_SIZE + indexOfBit
     return when (color) {
-        Red -> Coordinates.ofFileAndRank(coord, 2)
-        Yellow -> Coordinates.ofFileAndRank(coord, BOARD_SIZE - 3)
-        Blue -> Coordinates.ofFileAndRank(2, coord)
-        Green -> Coordinates.ofFileAndRank(BOARD_SIZE - 3, coord)
+        Red -> indexOfSquare(coord, 2)
+        Yellow -> indexOfSquare(coord, BOARD_SIZE - 3)
+        Blue -> indexOfSquare(2, coord)
+        Green -> indexOfSquare(BOARD_SIZE - 3, coord)
     }
 }
 
-internal fun EnPassantSquaresBits.withEnPassantSquareForColor(color: Color, coords: Coordinates): EnPassantSquaresBits {
+internal fun EnPassantSquaresBits.withEnPassantSquareForColor(color: Color, squareIndex: Int): EnPassantSquaresBits {
     val mask = 0xff shl (8 * color.ordinal)
     val cleared = this and mask.inv()
     val indexOfBit = when (color) {
-        Red, Yellow -> coords.file - DISABLED_AREA_SIZE
-        Blue, Green -> coords.rank - DISABLED_AREA_SIZE
+        Red, Yellow -> squareFile(squareIndex) - DISABLED_AREA_SIZE
+        Blue, Green -> squareRank(squareIndex) - DISABLED_AREA_SIZE
     }
     val bitsForColor = (1 shl indexOfBit) shl (8 * color.ordinal)
     return cleared or bitsForColor
@@ -188,8 +112,8 @@ internal fun EnPassantSquaresBits.dropEnPassantSquareForColor(color: Color): EnP
     return this and mask.inv()
 }
 
-internal fun EnPassantSquaresBits.getColorByEnPassantSquare(coords: Coordinates): Color? =
-        Color.values().firstOrNull { this.getEnPassantSquareByColor(it) == coords }
+internal fun EnPassantSquaresBits.getColorByEnPassantSquare(squareIndex: Int): Color? =
+        allColors.firstOrNull { this.getEnPassantSquareByColor(it) == squareIndex }
 
 internal fun initialEnPassantSquares(): EnPassantSquaresBits = 0
 
@@ -198,12 +122,12 @@ sealed class Square {
 
         companion object {
 
-            private val squares = Array(PieceType.values().size) { i ->
-                Array(Color.values().size) { j ->
+            private val squares = Array(allPieceTypes.size) { i ->
+                Array(allColors.size) { j ->
                     Occupied(
                             Piece(
-                                    type = PieceType.values()[i],
-                                    color = Color.values()[j]
+                                    type = allPieceTypes[i],
+                                    color = allColors[j]
                             )
                     )
                 }
@@ -228,36 +152,66 @@ internal fun squareOf(color: Color, pieceType: PieceType) =
 
 internal fun emptySquare() = Square.Empty
 
-internal typealias Row = Array<Square?>
+// avoiding primitives boxing
+internal typealias PieceList = TIntLinkedList
 
-internal typealias Board = Array<Row>
+internal typealias CheckBits = Short
 
-internal fun Board.byCoordinates(coordinates: Coordinates): Square =
-        this[coordinates.rank][coordinates.file]!!
-
-internal fun Board.set(coords: Coordinates, square: Square) {
-    this[coords.rank][coords.file] = square
+internal fun checkOf(checkingPieceSquareIndex: Int, checkedPieceSquareIndex: Int): CheckBits {
+    val result = (checkedPieceSquareIndex shl 8) or checkingPieceSquareIndex
+    return result.toShort()
 }
 
-internal typealias PieceList = LinkedList<Coordinates>
+internal val CheckBits.checkingPieceSquareIndex: Int
+    get() = this.toInt() and 0xff
 
-data class Check(
-        val checkingPieceCoordinates: Coordinates,
-        val checkedKingCoordinates: Coordinates
-)
+internal val CheckBits.checkedPieceSquareIndex: Int
+    get() = (this.toInt() shr 8) and 0xff
 
-internal data class Pin(val pinningPieceCoordinates: Coordinates, val pinnedPieceCoordinates: Coordinates)
+internal typealias PinBits = Short
 
-sealed class Move {
-    abstract val from: Coordinates
-    abstract val to: Coordinates
+internal fun pinOf(pinningPieceSquareIndex: Int, pinnedPieceSquareIndex: Int): PinBits {
+    val result = (pinnedPieceSquareIndex shl 8) or pinningPieceSquareIndex
+    return result.toShort()
 }
 
-data class RegularMove(override val from: Coordinates, override val to: Coordinates) : Move()
+internal val PinBits.pinningPieceSquareIndex: Int
+    get() = this.toInt() and 0xff
 
-data class Promotion(override val from: Coordinates,
-                     override val to: Coordinates,
-                     val pieceType: PromotionPieceType) : Move()
+internal val PinBits.pinnedPieceSquareIndex: Int
+    get() = (this.toInt() shr 8) and 0xff
+
+internal typealias MoveBits = Int
+
+internal const val NULL_MOVE = -1
+
+internal fun moveOf(fromSquareIndex: Int, toSquareIndex: Int): MoveBits =
+        (toSquareIndex shl 8) or fromSquareIndex
+
+internal fun moveOf(fromSquareIndex: Int, toSquareIndex: Int, promotionPieceType: PromotionPieceType): MoveBits {
+    val pieceTypeBit = when (promotionPieceType) {
+        PromotionPieceType.Queen -> 1
+        PromotionPieceType.Rook -> 2
+        PromotionPieceType.Bishop -> 4
+        PromotionPieceType.Knight -> 8
+    }
+    return (pieceTypeBit shl 16) or (toSquareIndex shl 8) or fromSquareIndex
+}
+
+internal val MoveBits.from: Int
+    get() = this and 0xff
+
+internal val MoveBits.to: Int
+    get() = this and 0xff00 shr 8
+
+internal val MoveBits.promotionPieceType: PromotionPieceType?
+    get() = when ((this and 0xff0000) shr 16) {
+        1 -> PromotionPieceType.Queen
+        2 -> PromotionPieceType.Rook
+        4 -> PromotionPieceType.Bishop
+        8 -> PromotionPieceType.Knight
+        else -> null
+    }
 
 enum class PromotionPieceType {
     Queen, Rook, Bishop, Knight;

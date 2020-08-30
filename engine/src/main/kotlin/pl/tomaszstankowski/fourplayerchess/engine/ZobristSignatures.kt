@@ -3,24 +3,23 @@ package pl.tomaszstankowski.fourplayerchess.engine
 import kotlin.random.Random
 
 internal class ZobristSignatures(random: Random) {
-    private val pieceSquare: Array<LongArray> = Array(PieceType.values().size * Color.values().size) {
+    private val pieceSquare: Array<LongArray> = Array(allPieceTypes.size * allColors.size) {
         LongArray(BOARD_SIZE * BOARD_SIZE) { random.nextLong() }
     }
 
-    fun getPieceSquareVal(piece: Piece, coordinates: Coordinates): Long {
-        val i = piece.color.ordinal * PieceType.values().size + piece.type.ordinal
-        val j = coordinates.rank * BOARD_SIZE + coordinates.file
-        return pieceSquare[i][j]
+    fun getPieceSquareVal(piece: Piece, squareIndex: Int): Long {
+        val i = piece.color.ordinal * allPieceTypes.size + piece.type.ordinal
+        return pieceSquare[i][squareIndex]
     }
 
-    private val nextMoveColor: LongArray = LongArray(Color.values().size) {
+    private val nextMoveColor: LongArray = LongArray(allColors.size) {
         random.nextLong()
     }
 
     fun getNextMoveColorVal(color: Color): Long =
             nextMoveColor[color.ordinal]
 
-    private val castling: Array<LongArray> = Array(Color.values().size) {
+    private val castling: Array<LongArray> = Array(allColors.size) {
         LongArray(4) { random.nextLong() }
     }
 
@@ -34,19 +33,19 @@ internal class ZobristSignatures(random: Random) {
         return castling[color.ordinal][i]
     }
 
-    private val enPassantSquare: Array<LongArray> = Array(Color.values().size) {
+    private val enPassantSquare: Array<LongArray> = Array(allColors.size) {
         LongArray(BOARD_SIZE) { random.nextLong() }
     }
 
-    fun getEnPassantVal(color: Color, enPassantCoords: Coordinates): Long {
+    fun getEnPassantVal(color: Color, enPassantSquareIndex: Int): Long {
         val i = when (color) {
-            Color.Red, Color.Yellow -> enPassantCoords.file
-            Color.Blue, Color.Green -> enPassantCoords.rank
+            Color.Red, Color.Yellow -> squareFile(enPassantSquareIndex)
+            Color.Blue, Color.Green -> squareRank(enPassantSquareIndex)
         }
         return enPassantSquare[color.ordinal][i]
     }
 
-    private val eliminatedColor: LongArray = LongArray(Color.values().size) {
+    private val eliminatedColor: LongArray = LongArray(allColors.size) {
         random.nextLong()
     }
 

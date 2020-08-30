@@ -25,7 +25,7 @@ fun Engine.unmakeMoveWithAssert() {
 
 fun Set<Move>.filterByMovedPieceType(state: FenState, pieceType: PieceType): Set<Move> =
         filter { move ->
-            (state.board.byCoordinates(move.from) as? Square.Occupied)?.piece?.type == pieceType
+            (state.board[move.from.rank][move.from.file] as? Square.Occupied)?.piece?.type == pieceType
         }
                 .toSet()
 

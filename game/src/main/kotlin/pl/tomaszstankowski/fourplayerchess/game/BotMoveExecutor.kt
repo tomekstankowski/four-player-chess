@@ -1,6 +1,5 @@
 package pl.tomaszstankowski.fourplayerchess.game
 
-import pl.tomaszstankowski.fourplayerchess.engine.Move
 import pl.tomaszstankowski.fourplayerchess.engine.UIState
 import pl.tomaszstankowski.fourplayerchess.game.Player.RandomBot
 import java.util.*
@@ -12,7 +11,14 @@ internal class BotMoveExecutor(private val executorService: ExecutorService,
 
     fun executeBotMoveIfHasNextMove(randomBots: List<RandomBot>, gameId: UUID, uiState: UIState) {
         if (isNextMoveMadeByRandomBot(randomBots, uiState)) {
-            executorService.submit { doMove(randomBots, gameId) }
+            executorService.submit {
+                try {
+                    doMove(randomBots, gameId)
+                } catch (e: Throwable) {
+                    println("Something went wrong while making move")
+                    e.printStackTrace()
+                }
+            }
         }
     }
 
@@ -20,11 +26,10 @@ internal class BotMoveExecutor(private val executorService: ExecutorService,
             !uiState.isGameOver && randomBots.any { it.color == uiState.fenState.nextMoveColor }
 
     private fun doMove(randomBots: List<RandomBot>, gameId: UUID) {
-        val (move, newState) = engineInstanceStore.synchronized(gameId) { engine ->
-            when (val move = engine.makeRandomMove()) {
-                is Move -> move to engine.getUIState()
-                else -> null
-            }
+        val move = engineInstanceStore.get(gameId)?.findBestMove() ?: return
+        val newState = engineInstanceStore.synchronized(gameId) { engine ->
+            engine.makeMove(move)
+            engine.getUIState()
         } ?: return
         gameMessageBroker.sendMoveMadeMessage(gameId, GameStateDto.of(newState), move.toDto())
         if (isNextMoveMadeByRandomBot(randomBots, newState)) {

@@ -6,7 +6,7 @@ internal data class State(val eliminatedColors: EliminatedColorsBits,
                           val enPassantSquares: EnPassantSquaresBits,
                           val castlingOptions: CastlingOptionsBits,
                           val plyCount: Int,
-                          val lastMove: Move?,
+                          val lastMove: MoveBits,
                           val capturedPiece: Piece?,
                           val hash: Long) {
 
@@ -27,10 +27,10 @@ internal data class State(val eliminatedColors: EliminatedColorsBits,
                     nextMoveColor = fenState.nextMoveColor,
                     enPassantSquares = fenState.enPassantSquares.entries
                             .fold(initialEnPassantSquares()) { enPassantSquaresBits, (color, coords) ->
-                                enPassantSquaresBits.withEnPassantSquareForColor(color, coords)
+                                enPassantSquaresBits.withEnPassantSquareForColor(color, coords.squareIndex)
                             },
                     plyCount = fenState.plyCount,
-                    lastMove = null,
+                    lastMove = NULL_MOVE,
                     capturedPiece = null,
                     hash = hash
             )

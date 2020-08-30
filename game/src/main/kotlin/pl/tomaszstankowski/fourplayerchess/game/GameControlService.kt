@@ -132,7 +132,10 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
         val randomBots = randomBotRepository.findByGameId(gameId)
         val updatedGame = game.copy(isCommitted = true)
         gameRepository.update(updatedGame)
-        val engine = Engine(random = random)
+        val engine = Engine(
+                random = random,
+                state = FenState.starting()
+        )
         engineInstanceStore.put(game.id, engine)
         val state = engine.getUIState()
         botMoveExecutor.executeBotMoveIfHasNextMove(randomBots, gameId, state)
@@ -229,9 +232,11 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
         val randomBots = randomBotRepository.findByGameId(gameId)
         val requestingPlayerColor = humanPlayers.firstOrNull { it.userId == dto.requestingPlayerId }?.color
                 ?: return SubmitResignationResult.Error.PlayerNotInTheGame
-        val (isResignationAllowed, state) = engineInstanceStore.synchronized(gameId) { engine ->
+        val (isResignationAllowed, state, prevState) = engineInstanceStore.synchronized(gameId) { engine ->
+            val prevState = engine.getUIState()
             val isResignationAllowed = engine.submitResignation(requestingPlayerColor)
-            isResignationAllowed to engine.getUIState()
+            val state = engine.getUIState()
+            Triple(isResignationAllowed, state, prevState)
         } ?: throw IllegalStateException()
         if (!isResignationAllowed) {
             return SubmitResignationResult.Error.NotAllowed
@@ -239,7 +244,9 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
         if (state.isGameOver) {
             handleGameFinished(game)
         }
-        botMoveExecutor.executeBotMoveIfHasNextMove(randomBots, gameId, state)
+        if (prevState.fenState.nextMoveColor == requestingPlayerColor) {
+            botMoveExecutor.executeBotMoveIfHasNextMove(randomBots, gameId, state)
+        }
 
         val newGameStateDto = GameStateDto.of(state)
         gameMessageBroker.sendResignationSubmittedMessage(gameId, newGameStateDto, requestingPlayerColor.toJsonStr())

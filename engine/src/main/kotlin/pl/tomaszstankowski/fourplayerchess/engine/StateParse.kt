@@ -192,7 +192,7 @@ internal object FenGrammar : Grammar<FenState>() {
             when (val result = pRowsUnchecked.tryParse(tokens)) {
                 is Parsed -> {
                     val allSquares = result.value.flatten()
-                    val kingCountsByColor = Color.values()
+                    val kingCountsByColor = allColors
                             .map { color ->
                                 val count = allSquares
                                         .filter { square -> square == Square.Occupied.by(color, King) }
@@ -232,7 +232,7 @@ internal object FenGrammar : Grammar<FenState>() {
                 nextMoveColor = nextMoveColor,
                 plyCount = plyCount,
                 castlingOptions =
-                Color.values().map { color ->
+                allColors.map { color ->
                     val kingSide = kingSideCastlingFlags[color]
                             ?.takeIf { canCastle -> canCastle }
                             ?.let { setOf(Castling.KingSide) }

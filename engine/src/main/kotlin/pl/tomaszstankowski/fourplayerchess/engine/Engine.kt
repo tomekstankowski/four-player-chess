@@ -1,10 +1,12 @@
 package pl.tomaszstankowski.fourplayerchess.engine
 
+import java.time.Duration
 import kotlin.random.Random
 
 class Engine(state: FenState = FenState.starting(),
              private val random: Random = Random.Default) {
-    private val position: Position = Position(state)
+    private val position: Position = Position.fromFenState(state)
+    private val search = ParanoidSearch(position, Duration.ofSeconds(5))
 
     private var isDrawByClaim = false
 
@@ -16,10 +18,15 @@ class Engine(state: FenState = FenState.starting(),
 
     fun getUIState() =
             UIState(
-                    fenState = position.toState(),
-                    legalMoves = this.position.legalMoves.toSet(),
-                    checks = Color.values()
-                            .map { color -> color to position.checks[color.ordinal].toSet() }
+                    fenState = position.toFenState(),
+                    legalMoves = this.position.getLegalMoves().map { it.toApiMove() }.toSet(),
+                    checks = allColors
+                            .map { color ->
+                                color to position.checks[color.ordinal]
+                                        .toArray()
+                                        .map { it.toApiCheck() }
+                                        .toSet()
+                            }
                             .toMap(),
                     isDrawByClaimAllowed = (this.position.isDrawByClaimPossible) && !isGameOver,
                     isGameOver = this.isGameOver,
@@ -46,9 +53,10 @@ class Engine(state: FenState = FenState.starting(),
         if (isGameOver) {
             return false
         }
-        val isValidMove = move in position.legalMoves
+        val moveBits = move.toBits()
+        val isValidMove = moveBits in position.getLegalMoves()
         if (isValidMove) {
-            makeValidMove(move)
+            position.makeMove(moveBits)
             return true
         }
         return false
@@ -65,13 +73,17 @@ class Engine(state: FenState = FenState.starting(),
         if (isGameOver) {
             return null
         }
-        val move = position.legalMoves.random(random)
-        makeValidMove(move)
-        return move
+        val move = position.getLegalMoves().random(random)
+        position.makeMove(move)
+        return move.toApiMove()
     }
 
-    private fun makeValidMove(move: Move) {
-        position.makeMove(move)
+    fun findBestMove(): Move? {
+        if (isGameOver) {
+            return null
+        }
+        search.pos = position.copy()
+        return search.findBestMove().toApiMove()
     }
 
 }
