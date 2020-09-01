@@ -32,16 +32,20 @@ internal class ParanoidSearch(private val position: Position,
         val pgnFormatter = PGNFormatter(tmpPos)
         val pv = LinkedList<PositionEvaluation.PVMove>()
         val tt = transpositionTables[tmpPos.nextMoveColor.ordinal]
-        val rootHash = tmpPos.hash
-        val rootEntry = tt.get(rootHash) ?: return null
+        // to avoid cycle
+        val pvHashes = LinkedList<Long>()
+        val rootEntry = tt.get(tmpPos.hash) ?: return null
         var currEntry: TranspositionTable.Entry = rootEntry
         do {
+            pvHashes.add(tmpPos.hash)
             val move = currEntry.move
             val pvMove = PositionEvaluation.PVMove(move, moveText = pgnFormatter.formatMove(move))
             pv.add(pvMove)
             tmpPos.makeMove(move)
-            currEntry = tt.get(tmpPos.hash) ?: break
-        } while (tmpPos.hash != rootHash)
+            currEntry = tt.get(tmpPos.hash)
+                    ?.takeIf { e -> e.nodeType == EXACT }
+                    ?: break
+        } while (tmpPos.hash !in pvHashes)
         return PositionEvaluation(pv, rootEntry.eval)
     }
 
