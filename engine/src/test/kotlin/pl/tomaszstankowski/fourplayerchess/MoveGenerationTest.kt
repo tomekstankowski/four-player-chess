@@ -31,7 +31,7 @@ object MoveGenerationTest : Spek({
             6,rP,7/
             6,rK,7
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -59,7 +59,7 @@ object MoveGenerationTest : Spek({
             6,rP,7/
             6,rK,7
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -84,7 +84,7 @@ object MoveGenerationTest : Spek({
             6,rP,7/
             6,rK,7
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -111,7 +111,7 @@ object MoveGenerationTest : Spek({
             6,rP,7/
             6,rK,7
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -136,7 +136,7 @@ object MoveGenerationTest : Spek({
             6,rP,7/
             6,rK,7
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -163,7 +163,7 @@ object MoveGenerationTest : Spek({
             14/
             6,rK,7
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -190,7 +190,7 @@ object MoveGenerationTest : Spek({
             14/
             6,rK,7
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -215,7 +215,7 @@ object MoveGenerationTest : Spek({
             14/
             6,rK,7
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -240,7 +240,7 @@ object MoveGenerationTest : Spek({
             14/
             6,rK,7
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -268,7 +268,7 @@ object MoveGenerationTest : Spek({
             14/
             6,rK,7
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -296,7 +296,7 @@ object MoveGenerationTest : Spek({
             14/
             6,rK,7
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -325,7 +325,7 @@ object MoveGenerationTest : Spek({
             6,rN,7/
             6,rK,7
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -352,7 +352,7 @@ object MoveGenerationTest : Spek({
             6,rN,7/
             6,rK,7
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -379,7 +379,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -406,7 +406,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -433,7 +433,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -461,7 +461,7 @@ object MoveGenerationTest : Spek({
                 3,rP,rP,rP,2,rP,rP,rP,3/
                 3,rR,rN,1,rQ,rK,1,rN,rR,3
             """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -503,7 +503,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -528,7 +528,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -557,7 +557,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -584,7 +584,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -612,7 +612,7 @@ object MoveGenerationTest : Spek({
             3,rP,rP,rP,rP,rP,rP,rP,rP,3/
             3,rR,1,rB,rQ,rK,rB,1,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val moves = engine.legalMoves
 
@@ -643,7 +643,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -668,7 +668,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -695,7 +695,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -723,7 +723,7 @@ object MoveGenerationTest : Spek({
             4,rP,rP,rP,rP,rP,rP,rP,3/
             4,rN,rB,rQ,rK,rB,1,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val moves = engine.legalMoves
 
@@ -774,7 +774,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -799,7 +799,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -828,7 +828,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -855,7 +855,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -883,7 +883,7 @@ object MoveGenerationTest : Spek({
             3,rP,rP,rP,1,rP,rP,rP,rP,3/
             3,rR,rN,rB,1,rK,rB,rN,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val moves = engine.legalMoves
 
@@ -950,7 +950,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -981,7 +981,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1008,7 +1008,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1036,7 +1036,7 @@ object MoveGenerationTest : Spek({
             4,rK,9/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1070,7 +1070,7 @@ object MoveGenerationTest : Spek({
             4,rK,9/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1102,7 +1102,7 @@ object MoveGenerationTest : Spek({
             3,rP,rP,rP,rP,rQ,rP,rP,rP,3/
             3,rR,1,rB,1,rK,1,rN,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1130,7 +1130,7 @@ object MoveGenerationTest : Spek({
             3,rP,rP,rP,rP,1,rP,rB,rP,3/
             3,rR,rN,rB,rQ,rK,2,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1155,7 +1155,7 @@ object MoveGenerationTest : Spek({
             3,rP,rP,rP,rP,rN,1,rP,rP,3/
             3,rR,rN,rB,rQ,rK,2,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1182,7 +1182,7 @@ object MoveGenerationTest : Spek({
             3,rP,rP,1,rB,rQ,rP,rP,rP,3/
             3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1207,7 +1207,7 @@ object MoveGenerationTest : Spek({
             3,rP,1,rP,rB,rP,rP,rP,rP,3/
             3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1234,7 +1234,7 @@ object MoveGenerationTest : Spek({
             3,rP,rP,1,rQ,rP,rP,rP,rP,3/
             3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1262,7 +1262,7 @@ object MoveGenerationTest : Spek({
             3,rP,rP,1,rP,rQ,rP,rP,rP,3/
             3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1289,7 +1289,7 @@ object MoveGenerationTest : Spek({
             3,rP,rB,rP,rQ,rP,rP,1,rP,3/
             3,rR,3,rK,2,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1317,7 +1317,7 @@ object MoveGenerationTest : Spek({
             3,rP,rP,rP,rP,rN,1,rP,rP,3/
             3,rR,rN,rB,rQ,rK,2,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1344,7 +1344,7 @@ object MoveGenerationTest : Spek({
             3,rP,rP,rP,rP,rB,rP,rP,rP,3/
             3,rR,rN,rB,rQ,rK,2,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1372,7 +1372,7 @@ object MoveGenerationTest : Spek({
             3,rP,rB,rP,rP,1,rP,rP,rP,3/
             3,rR,3,rK,rB,rN,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1401,7 +1401,7 @@ object MoveGenerationTest : Spek({
             3,rP,rB,rP,rP,rN,rP,rP,rP,3/
             3,rR,3,rK,2,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1432,7 +1432,7 @@ object MoveGenerationTest : Spek({
             14/
             14
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 
@@ -1466,7 +1466,7 @@ object MoveGenerationTest : Spek({
             5,rP,rP,1,rP,rP,rP,3/
             3,rR,1,rB,rQ,rK,2,rR,3
         """.trimIndent())
-            val engine = Engine(state)
+            val engine = Engine.withRandomSearch(state)
 
             val validMoves = engine.legalMoves
 

@@ -20,7 +20,7 @@ class Engine internal constructor(
             )
         }
 
-        fun withRandomSearch(state: FenState, random: Random): Engine {
+        fun withRandomSearch(state: FenState, random: Random = Random.Default): Engine {
             val position = Position.fromFenState(state)
             return Engine(
                     position = position,

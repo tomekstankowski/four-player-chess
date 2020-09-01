@@ -31,7 +31,7 @@ fun Set<Move>.filterByMovedPieceType(state: FenState, pieceType: PieceType): Set
 
 fun createEngineWithStateFromFen(fen: String): Engine {
     val state = parseStateFromFenOrThrow(fen)
-    return Engine(state)
+    return Engine.withRandomSearch(state)
 }
 
 fun parseStateFromFenOrThrow(input: String): FenState =
