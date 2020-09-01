@@ -230,8 +230,12 @@ internal inline fun TIntList.forEachDo(crossinline func: (Int) -> Unit) {
     }
 }
 
-internal inline fun IntArray.fastForEach(func: (Int) -> Unit) {
-    for (i in 0 until this.size) {
-        func(this[i])
+internal val PieceType.materialValue: Int
+    get() = when (this) {
+        PieceType.Pawn -> 100
+        PieceType.Knight -> 300
+        PieceType.Bishop -> 500
+        PieceType.Rook -> 500
+        PieceType.Queen -> 900
+        PieceType.King -> 2000
     }
-}

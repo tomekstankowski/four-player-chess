@@ -221,3 +221,9 @@ data class UIState(
         val winningColor: Color?,
         val legalMoves: Set<Move>
 )
+
+data class StateEvaluation(val principalVariation: List<PVMove>, val value: Int) {
+    data class PVMove(
+            val move: Move,
+            val moveText: String)
+}

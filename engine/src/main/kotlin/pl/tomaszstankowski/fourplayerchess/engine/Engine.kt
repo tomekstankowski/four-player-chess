@@ -1,12 +1,33 @@
 package pl.tomaszstankowski.fourplayerchess.engine
 
-import java.time.Duration
+import pl.tomaszstankowski.fourplayerchess.engine.paranoid.ParanoidSearch
+import pl.tomaszstankowski.fourplayerchess.engine.random.RandomSearch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import kotlin.random.Random
 
-class Engine(state: FenState = FenState.starting(),
-             private val random: Random = Random.Default) {
-    private val position: Position = Position.fromFenState(state)
-    private val search = ParanoidSearch(position, Duration.ofSeconds(5))
+class Engine internal constructor(
+        private val position: Position,
+        private val search: Search) {
+
+    companion object {
+        fun withParanoidSearch(state: FenState,
+                               searchExecutorService: ExecutorService = Executors.newSingleThreadExecutor()): Engine {
+            val position = Position.fromFenState(state)
+            return Engine(
+                    position = position,
+                    search = ParanoidSearch(position, searchExecutorService)
+            )
+        }
+
+        fun withRandomSearch(state: FenState, random: Random): Engine {
+            val position = Position.fromFenState(state)
+            return Engine(
+                    position = position,
+                    search = RandomSearch(position, random)
+            )
+        }
+    }
 
     private var isDrawByClaim = false
 
@@ -69,21 +90,26 @@ class Engine(state: FenState = FenState.starting(),
         return position.unmakeMove()
     }
 
-    fun makeRandomMove(): Move? {
+    fun search() {
         if (isGameOver) {
-            return null
+            return
         }
-        val move = position.getLegalMoves().random(random)
-        position.makeMove(move)
-        return move.toApiMove()
+        search.startSearch()
     }
 
-    fun findBestMove(): Move? {
-        if (isGameOver) {
-            return null
-        }
-        search.pos = position.copy()
-        return search.findBestMove().toApiMove()
+    fun stopSearching() {
+        search.stopSearch()
     }
 
+    fun getStateEvaluation(): StateEvaluation? =
+            search.getPositionEvaluation()
+                    ?.toStateEvaluation()
+
+    private fun PositionEvaluation.toStateEvaluation() =
+            StateEvaluation(
+                    principalVariation = pv.map { (move, moveText) ->
+                        StateEvaluation.PVMove(move.toApiMove(), moveText)
+                    },
+                    value = evaluation
+            )
 }

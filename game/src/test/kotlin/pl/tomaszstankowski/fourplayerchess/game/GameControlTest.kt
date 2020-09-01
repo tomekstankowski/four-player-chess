@@ -3,6 +3,7 @@ package pl.tomaszstankowski.fourplayerchess.game
 import org.amshove.kluent.mock
 import org.amshove.kluent.should
 import org.amshove.kluent.shouldBeEqualTo
+import org.jmock.lib.concurrent.DeterministicScheduler
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.specification.describe
 import pl.tomaszstankowski.fourplayerchess.game.Fixture.CLAIM_DRAW_DTO
@@ -12,18 +13,26 @@ import pl.tomaszstankowski.fourplayerchess.game.Fixture.NOW
 import pl.tomaszstankowski.fourplayerchess.game.Fixture.RANDOM_SEED
 import pl.tomaszstankowski.fourplayerchess.game.Fixture.RESIGN_DTO
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.util.*
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 
 class GameControlTest : Spek({
 
-    fun createServiceForTesting(random: Random = Random(RANDOM_SEED)) =
+    fun createServiceForTesting(random: Random = Random(RANDOM_SEED),
+                                botMoveDuration: Duration = Duration.ofSeconds(3),
+                                botMoveScheduler: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()) =
             GameControlService.create(
                     clock = Clock.fixed(Instant.parse(NOW), ZoneId.of("UTC")),
                     random = random,
-                    messageSendingOperations = mock()
+                    messageSendingOperations = mock(),
+                    botMoveExecutor = botMoveScheduler,
+                    botMoveDuration = botMoveDuration
             )
 
     describe("creating game") {
@@ -163,7 +172,12 @@ class GameControlTest : Spek({
 
         it("should play bot move if bot opens game") {
             // human player should play as blue
-            val service = createServiceForTesting(random = Random(8))
+            val botMoveScheduler = DeterministicScheduler()
+            val service = createServiceForTesting(
+                    random = Random(8),
+                    botMoveDuration = Duration.ofSeconds(5),
+                    botMoveScheduler = botMoveScheduler
+            )
             service.createGame(
                     CreateGameDto(
                             humanPlayersIds = setOf(
@@ -174,6 +188,7 @@ class GameControlTest : Spek({
             )
 
             service.commitGame(UUID.fromString("00000000-0000-0000-0000-000000000001"))
+            botMoveScheduler.tick(6, TimeUnit.SECONDS)
             val state = service.getGameState(UUID.fromString("00000000-0000-0000-0000-000000000001"))
 
             state should {
@@ -571,7 +586,12 @@ class GameControlTest : Spek({
         }
 
         it("should play bot move if bot has next move") {
-            val service = createServiceForTesting(random = Random(10))
+            val botMoveScheduler = DeterministicScheduler()
+            val service = createServiceForTesting(
+                    random = Random(10),
+                    botMoveDuration = Duration.ofSeconds(5),
+                    botMoveScheduler = botMoveScheduler
+            )
             service.createGame(
                     CreateGameDto(
                             humanPlayersIds = setOf(
@@ -586,6 +606,7 @@ class GameControlTest : Spek({
             service.makeMove(
                     MAKE_MOVE_DTO.copy(playerId = UUID.fromString("110cf939-5ba1-4866-a4d1-e93cbf56f244"))
             )
+            botMoveScheduler.tick(6, TimeUnit.SECONDS)
             val result = service.getGameState(UUID.fromString("00000000-0000-0000-0000-000000000001"))
 
             result should {
@@ -712,7 +733,12 @@ class GameControlTest : Spek({
         }
 
         it("should play bot move if bot has next move") {
-            val service = createServiceForTesting(random = Random(10))
+            val botMoveScheduler = DeterministicScheduler()
+            val service = createServiceForTesting(
+                    random = Random(10),
+                    botMoveDuration = Duration.ofSeconds(5),
+                    botMoveScheduler = botMoveScheduler
+            )
             service.createGame(
                     CreateGameDto(
                             humanPlayersIds = setOf(
@@ -727,6 +753,7 @@ class GameControlTest : Spek({
             service.submitResignation(
                     RESIGN_DTO.copy(requestingPlayerId = UUID.fromString("110cf939-5ba1-4866-a4d1-e93cbf56f244"))
             )
+            botMoveScheduler.tick(6, TimeUnit.SECONDS)
             val result = service.getGameState(UUID.fromString("00000000-0000-0000-0000-000000000001"))
 
             result should {

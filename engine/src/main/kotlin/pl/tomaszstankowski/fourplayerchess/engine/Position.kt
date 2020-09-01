@@ -226,6 +226,107 @@ internal class Position(private val previousStates: LinkedList<State>,
         return isLightSquare(firstBishopPos) == isLightSquare(secondBishopPos)
     }
 
+    fun isCheck(move: MoveBits): Boolean = getCheckedKingSquare(move) != NULL_SQUARE
+
+    private fun getCheckedKingSquare(move: MoveBits): Int {
+        val checkFrom = move.to
+        val checkingPiece = (board[move.from] as Square.Occupied).piece
+        return when (checkingPiece.type) {
+            Pawn -> getCheckedKingSquare(checkFrom, pawnAttackOffsets[checkingPiece.color.ordinal])
+            Knight -> getCheckedKingSquare(checkFrom, knightMoveOffsets)
+            Bishop -> getCheckedBySlidingPieceKingSquare(checkFrom, bishopMoveOffsets)
+            Rook -> getCheckedBySlidingPieceKingSquare(checkFrom, rookMoveOffsets)
+            Queen -> getCheckedBySlidingPieceKingSquare(checkFrom, allDirectionsOffsets)
+            King -> NULL_SQUARE
+        }
+    }
+
+    private fun getCheckedKingSquare(attackingSquareIndex: Int, attackOffsets: IntArray): Int {
+        attackOffsets.forEach { offset ->
+            val attackedSquareIndex = offsetSquareBy(attackingSquareIndex, offset)
+            if (attackedSquareIndex != NULL_SQUARE) {
+                val square = board[attackedSquareIndex]
+                if (square is Square.Occupied
+                        && square.piece.type == King
+                        && !isEliminated(square.piece.color)
+                        && square.piece.color != state.nextMoveColor) {
+                    return attackedSquareIndex
+                }
+            }
+        }
+        return NULL_SQUARE
+    }
+
+    private fun getCheckedBySlidingPieceKingSquare(attackingSquareIndex: Int, attackOffsets: IntArray): Int {
+        attackOffsets.forEach { offset ->
+            var squareIndex = attackingSquareIndex
+            while (true) {
+                squareIndex = offsetSquareBy(squareIndex, offset)
+                if (squareIndex == NULL_SQUARE) break
+                val sqr = board[squareIndex]
+                if (sqr is Square.Occupied) {
+                    if (sqr.piece.type == King
+                            && !isEliminated(sqr.piece.color)
+                            && sqr.piece.color != state.nextMoveColor) {
+                        return squareIndex
+                    } else {
+                        break
+                    }
+                }
+            }
+        }
+        return NULL_SQUARE
+    }
+
+    fun isCheckMate(move: MoveBits): Boolean {
+        val eliminateColorsCount = state.eliminatedColors.eliminatedColorsCount
+        makeMove(move)
+        val newEliminatedColorsCount = state.eliminatedColors.eliminatedColorsCount
+        unmakeMove()
+        return eliminateColorsCount < newEliminatedColorsCount
+    }
+
+    fun getSquare(index: Int): Square? = board[index]
+
+    fun getCastling(move: MoveBits): Castling? {
+        val from = move.from
+        val to = move.to
+        val square = board[from]
+        val movedPieceType = (square as Square.Occupied).piece.type
+        val movedPieceColor = state.nextMoveColor
+        if (movedPieceType == King && from == movedPieceColor.defaultKingSquare) {
+            if (to == kingSquareAfterCastling[movedPieceColor.ordinal][KingSide.ordinal]) {
+                return KingSide
+            }
+            if (to == kingSquareAfterCastling[movedPieceColor.ordinal][QueenSide.ordinal]) {
+                return QueenSide
+            }
+        }
+        return null
+    }
+
+    fun isQuietMove(move: MoveBits) = board[move.to] == Square.Empty && move.promotionPieceType == null
+
+    fun getCapturedPiece(move: MoveBits): Piece? {
+        val from = move.from
+        val to = move.to
+        val toSquare = board[to]
+        if (toSquare is Square.Occupied) {
+            return toSquare.piece
+        }
+        val fromSquare = board[from]
+        val movedPieceType = (fromSquare as Square.Occupied).piece.type
+        if (movedPieceType == Pawn) {
+            val enPassantSquareColor = state.enPassantSquares.getColorByEnPassantSquare(to)
+            if (enPassantSquareColor != null) {
+                return Square.Occupied.by(enPassantSquareColor, Pawn).piece
+            }
+        }
+        return null
+    }
+
+    fun getMovedPiece(move: MoveBits): Piece = (board[move.from] as Square.Occupied).piece
+
     fun copy() = Position(
             previousStates = LinkedList(this.previousStates),
             board = this.board.copyOf(),
@@ -439,45 +540,11 @@ internal class Position(private val previousStates: LinkedList<State>,
         }
     }
 
-    private fun getCastling(move: MoveBits): Castling? {
-        val from = move.from
-        val to = move.to
-        val square = board[from]
-        val movedPieceType = (square as Square.Occupied).piece.type
-        val movedPieceColor = state.nextMoveColor
-        if (movedPieceType == King && from == movedPieceColor.defaultKingSquare) {
-            if (to == kingSquareAfterCastling[movedPieceColor.ordinal][KingSide.ordinal]) {
-                return KingSide
-            }
-            if (to == kingSquareAfterCastling[movedPieceColor.ordinal][QueenSide.ordinal]) {
-                return QueenSide
-            }
-        }
-        return null
-    }
 
     private fun isCaptureByEnPassant(move: MoveBits): Boolean {
         val srcSquare = board[move.from]
         val movedPieceType = (srcSquare as Square.Occupied).piece.type
         return movedPieceType == Pawn && state.enPassantSquares.getColorByEnPassantSquare(move.to) != null
-    }
-
-    private fun getCapturedPiece(move: MoveBits): Piece? {
-        val from = move.from
-        val to = move.to
-        val toSquare = board[to]
-        if (toSquare is Square.Occupied) {
-            return toSquare.piece
-        }
-        val fromSquare = board[from]
-        val movedPieceType = (fromSquare as Square.Occupied).piece.type
-        if (movedPieceType == Pawn) {
-            val enPassantSquareColor = state.enPassantSquares.getColorByEnPassantSquare(to)
-            if (enPassantSquareColor != null) {
-                return Square.Occupied.by(enPassantSquareColor, Pawn).piece
-            }
-        }
-        return null
     }
 
     private fun getNewNextMoveColor(): Color {

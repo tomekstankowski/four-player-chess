@@ -1,6 +1,5 @@
 package pl.tomaszstankowski.fourplayerchess.game
 
-import com.google.common.util.concurrent.MoreExecutors
 import org.springframework.messaging.simp.SimpMessageSendingOperations
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionOperations
@@ -8,15 +7,19 @@ import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.util.IdGenerator
 import org.springframework.util.JdkIdGenerator
 import org.springframework.util.SimpleIdGenerator
-import pl.tomaszstankowski.fourplayerchess.engine.*
+import pl.tomaszstankowski.fourplayerchess.engine.Color
+import pl.tomaszstankowski.fourplayerchess.engine.Coordinates
 import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
+import pl.tomaszstankowski.fourplayerchess.engine.Promotion
+import pl.tomaszstankowski.fourplayerchess.engine.RegularMove
 import pl.tomaszstankowski.fourplayerchess.game.Player.HumanPlayer
 import pl.tomaszstankowski.fourplayerchess.game.Player.RandomBot
 import pl.tomaszstankowski.fourplayerchess.game.data.*
 import java.time.Clock
+import java.time.Duration
 import java.util.*
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import javax.sql.DataSource
 import kotlin.random.Random
 
@@ -28,14 +31,17 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
                                               private val randomBotRepository: RandomBotRepository,
                                               private val engineInstanceStore: EngineInstanceStore,
                                               private val gameMessageBroker: GameMessageBroker,
-                                              private val botMoveExecutor: BotMoveExecutor) {
+                                              private val botMoveExecutor: BotMoveExecutor,
+                                              private val engineFactory: EngineFactory) {
 
     companion object {
         fun create(clock: Clock = Clock.systemUTC(),
                    dataSource: DataSource,
                    transactionManager: PlatformTransactionManager,
-                   botMoveExecutor: ExecutorService = Executors.newFixedThreadPool(8),
-                   messageSendingOperations: SimpMessageSendingOperations) =
+                   botMoveExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
+                   messageSendingOperations: SimpMessageSendingOperations,
+                   searchAlgorithm: SearchAlgorithm = SearchAlgorithm.Paranoid,
+                   botMoveDuration: Duration = Duration.ofSeconds(5)) =
                 create(
                         idGenerator = JdkIdGenerator(),
                         clock = clock,
@@ -45,12 +51,17 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
                         humanPlayerRepository = JdbcHumanPlayerRepository(dataSource),
                         randomBotRepository = JdbcRandomBotRepository(dataSource),
                         messageSendingOperations = messageSendingOperations,
-                        botMoveExecutor = botMoveExecutor
+                        botMoveExecutor = botMoveExecutor,
+                        searchAlgorithm = searchAlgorithm,
+                        botMoveDuration = botMoveDuration
                 )
 
         fun create(clock: Clock,
                    random: Random,
-                   messageSendingOperations: SimpMessageSendingOperations): GameControlService {
+                   messageSendingOperations: SimpMessageSendingOperations,
+                   botMoveExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
+                   searchAlgorithm: SearchAlgorithm = SearchAlgorithm.Random,
+                   botMoveDuration: Duration = Duration.ofSeconds(5)): GameControlService {
             val dataSource = InMemoryDataSource()
             return create(
                     idGenerator = SimpleIdGenerator(),
@@ -61,7 +72,9 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
                     humanPlayerRepository = InMemoryHumanPlayerRepository(dataSource),
                     randomBotRepository = InMemoryRandomBotRepository(dataSource),
                     messageSendingOperations = messageSendingOperations,
-                    botMoveExecutor = MoreExecutors.newDirectExecutorService()
+                    botMoveExecutor = botMoveExecutor,
+                    searchAlgorithm = searchAlgorithm,
+                    botMoveDuration = botMoveDuration
             )
         }
 
@@ -73,7 +86,9 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
                            humanPlayerRepository: HumanPlayerRepository,
                            randomBotRepository: RandomBotRepository,
                            messageSendingOperations: SimpMessageSendingOperations,
-                           botMoveExecutor: ExecutorService): GameControlService {
+                           botMoveExecutor: ScheduledExecutorService,
+                           searchAlgorithm: SearchAlgorithm,
+                           botMoveDuration: Duration): GameControlService {
             val engineInstanceStore = EngineInstanceStore()
             return GameControlService(
                     gameFactory = GameFactory(idGenerator, clock),
@@ -87,8 +102,14 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
                     botMoveExecutor = BotMoveExecutor(
                             executorService = botMoveExecutor,
                             gameMessageBroker = GameMessageBroker(messageSendingOperations),
-                            engineInstanceStore = engineInstanceStore
-                    )
+                            engineInstanceStore = engineInstanceStore,
+                            random = random,
+                            botMoveDuration = botMoveDuration
+                    ),
+                    engineFactory = when (searchAlgorithm) {
+                        SearchAlgorithm.Paranoid -> ParanoidSearchEngineFactory()
+                        SearchAlgorithm.Random -> RandomSearchEngineFactory(random)
+                    }
             )
         }
     }
@@ -132,10 +153,7 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
         val randomBots = randomBotRepository.findByGameId(gameId)
         val updatedGame = game.copy(isCommitted = true)
         gameRepository.update(updatedGame)
-        val engine = Engine(
-                random = random,
-                state = FenState.starting()
-        )
+        val engine = engineFactory.create()
         engineInstanceStore.put(game.id, engine)
         val state = engine.getUIState()
         botMoveExecutor.executeBotMoveIfHasNextMove(randomBots, gameId, state)

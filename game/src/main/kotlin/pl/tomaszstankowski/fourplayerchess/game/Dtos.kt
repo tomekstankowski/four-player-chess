@@ -6,6 +6,11 @@ import pl.tomaszstankowski.fourplayerchess.engine.PieceType.*
 import java.time.Instant
 import java.util.*
 
+enum class SearchAlgorithm {
+    Paranoid,
+    Random
+}
+
 data class CreateGameDto(val humanPlayersIds: Set<UUID>, val randomBotsCount: Int)
 
 data class GameDto(val id: UUID,

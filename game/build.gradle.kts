@@ -22,6 +22,7 @@ dependencies {
     testImplementation("org.spekframework.spek2:spek-dsl-jvm:$spekVersion")
     testRuntimeOnly("org.spekframework.spek2:spek-runner-junit5:$spekVersion")
     testImplementation("org.amshove.kluent:kluent:$kluentVersion")
+    testImplementation("org.jmock:jmock-junit5:2.12.0")
 }
 
 tasks.withType<Jar> { enabled = true }
