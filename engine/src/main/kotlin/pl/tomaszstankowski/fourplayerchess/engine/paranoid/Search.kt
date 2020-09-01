@@ -1,9 +1,9 @@
 package pl.tomaszstankowski.fourplayerchess.engine.paranoid
 
 import pl.tomaszstankowski.fourplayerchess.engine.*
-import pl.tomaszstankowski.fourplayerchess.engine.TranspositionTable.NodeType.EXACT
-import pl.tomaszstankowski.fourplayerchess.engine.TranspositionTable.NodeType.LOWER_BOUND
-import pl.tomaszstankowski.fourplayerchess.engine.TranspositionTable.NodeType.UPPER_BOUND
+import pl.tomaszstankowski.fourplayerchess.engine.paranoid.TranspositionTable.NodeType.EXACT
+import pl.tomaszstankowski.fourplayerchess.engine.paranoid.TranspositionTable.NodeType.LOWER_BOUND
+import pl.tomaszstankowski.fourplayerchess.engine.paranoid.TranspositionTable.NodeType.UPPER_BOUND
 import java.util.*
 import java.util.concurrent.ExecutorService
 import kotlin.math.max
@@ -46,7 +46,7 @@ internal class ParanoidSearch(private val position: Position,
                     ?.takeIf { e -> e.nodeType == EXACT }
                     ?: break
         } while (tmpPos.hash !in pvHashes)
-        return PositionEvaluation(pv, rootEntry.eval)
+        return PositionEvaluation(pv, rootEntry.eval / 100f)
     }
 
     override fun stopSearch() {
@@ -77,7 +77,7 @@ internal class ParanoidSearch(private val position: Position,
             val iterationStartTime = System.currentTimeMillis()
             leafCnt = 0
             nodeCnt = 0
-            val value = alphaBeta(
+            alphaBeta(
                     maxColor = pos.nextMoveColor,
                     alpha = Int.MIN_VALUE,
                     beta = Int.MAX_VALUE,
@@ -92,7 +92,7 @@ internal class ParanoidSearch(private val position: Position,
             val iterationDurationMs = iterationEndTime - iterationStartTime
             val nodesPerSec: Float = nodeCnt.toFloat() / iterationDurationMs * 1000
             println("Depth $depth took $iterationDurationMs ms")
-            println("nodes: $nodeCnt, leaves: $leafCnt, nodes/s: $nodesPerSec, eval: $value")
+            println("nodes: $nodeCnt, leaves: $leafCnt, nodes/s: $nodesPerSec")
         }
 
         val tt = transpositionTables[pos.nextMoveColor.ordinal]
@@ -113,18 +113,21 @@ internal class ParanoidSearch(private val position: Position,
             return if (isMax) beta else alpha
         }
         nodeCnt++
-        if (pos.isDrawByClaimPossible || pos.isDraw) {
-            return DRAW_VALUE
-        }
         if (pos.isEliminated(maxColor)) {
+            leafCnt++
             return LOSE_VALUE
         }
         if (pos.winner == maxColor) {
+            leafCnt++
             return WIN_VALUE
+        }
+        if (pos.isDrawByClaimPossible || pos.isDraw) {
+            leafCnt++
+            return DRAW_VALUE
         }
         if (depth == 0.toByte()) {
             leafCnt++
-            return evaluatePosition(pos, maxColor)
+            return evaluateParanoidPosition(pos, maxColor)
         }
         var newAlpha = alpha
         var newBeta = beta

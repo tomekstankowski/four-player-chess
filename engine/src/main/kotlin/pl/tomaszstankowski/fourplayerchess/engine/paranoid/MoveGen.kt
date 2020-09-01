@@ -1,13 +1,14 @@
-package pl.tomaszstankowski.fourplayerchess.engine
+package pl.tomaszstankowski.fourplayerchess.engine.paranoid
 
-import pl.tomaszstankowski.fourplayerchess.engine.MoveGenerator.Scores.EQUAL_CAPTURE
-import pl.tomaszstankowski.fourplayerchess.engine.MoveGenerator.Scores.EXACT_TT_NODE
-import pl.tomaszstankowski.fourplayerchess.engine.MoveGenerator.Scores.KILLER_MOVE
-import pl.tomaszstankowski.fourplayerchess.engine.MoveGenerator.Scores.LOSING_CAPTURE
-import pl.tomaszstankowski.fourplayerchess.engine.MoveGenerator.Scores.PROMOTION
-import pl.tomaszstankowski.fourplayerchess.engine.MoveGenerator.Scores.QUIET_MOVE
-import pl.tomaszstankowski.fourplayerchess.engine.MoveGenerator.Scores.TT_NODE
-import pl.tomaszstankowski.fourplayerchess.engine.MoveGenerator.Scores.WINNING_CAPTURE
+import pl.tomaszstankowski.fourplayerchess.engine.*
+import pl.tomaszstankowski.fourplayerchess.engine.paranoid.MoveGenerator.Scores.EQUAL_CAPTURE
+import pl.tomaszstankowski.fourplayerchess.engine.paranoid.MoveGenerator.Scores.EXACT_TT_NODE
+import pl.tomaszstankowski.fourplayerchess.engine.paranoid.MoveGenerator.Scores.KILLER_MOVE
+import pl.tomaszstankowski.fourplayerchess.engine.paranoid.MoveGenerator.Scores.LOSING_CAPTURE
+import pl.tomaszstankowski.fourplayerchess.engine.paranoid.MoveGenerator.Scores.PROMOTION
+import pl.tomaszstankowski.fourplayerchess.engine.paranoid.MoveGenerator.Scores.QUIET_MOVE
+import pl.tomaszstankowski.fourplayerchess.engine.paranoid.MoveGenerator.Scores.TT_NODE
+import pl.tomaszstankowski.fourplayerchess.engine.paranoid.MoveGenerator.Scores.WINNING_CAPTURE
 
 internal data class ScoredMove(val move: MoveBits, val score: Int)
 

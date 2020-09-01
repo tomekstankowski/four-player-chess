@@ -24,3 +24,10 @@ internal class RandomSearchEngineFactory(private val random: Random) : EngineFac
             Engine.withRandomSearch(FenState.starting(), random)
 
 }
+
+internal class HypermaxEngineFactory : EngineFactory {
+
+    override fun create(): Engine =
+            Engine.withHypermax(FenState.starting())
+
+}

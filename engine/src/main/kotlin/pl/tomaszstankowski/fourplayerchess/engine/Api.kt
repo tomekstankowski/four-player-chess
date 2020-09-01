@@ -222,7 +222,7 @@ data class UIState(
         val legalMoves: Set<Move>
 )
 
-data class StateEvaluation(val principalVariation: List<PVMove>, val value: Int) {
+data class StateEvaluation(val principalVariation: List<PVMove>, val value: Float) {
     data class PVMove(
             val move: Move,
             val moveText: String)

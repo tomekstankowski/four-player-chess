@@ -44,12 +44,15 @@ internal class BotMoveExecutor(private val executorService: ScheduledExecutorSer
             val bestMove = stateEvaluation?.principalVariation?.firstOrNull()
                     ?.move
                     ?: engine.getUIState().legalMoves.random(random = random)
-            val pv = stateEvaluation?.principalVariation
-            if (pv != null) {
+            if (stateEvaluation != null) {
+                val pv = stateEvaluation.principalVariation
+                val eval = stateEvaluation.value
                 val pvStr = pv.joinToString { (_, moveText) -> moveText }
-                println("PV: $pvStr")
+                println("Eval: ${"%.2f".format(eval)}, PV: $pvStr")
             }
-            engine.makeMove(bestMove)
+            if (!engine.makeMove(bestMove)) {
+                throw IllegalStateException("Move $bestMove is illegal")
+            }
             return@synchronized bestMove to engine.getUIState()
         }
     }

@@ -1,17 +1,19 @@
-package pl.tomaszstankowski.fourplayerchess.engine
+package pl.tomaszstankowski.fourplayerchess.engine.hypermax
 
-import pl.tomaszstankowski.fourplayerchess.engine.TranspositionTable.NodeType.EXACT
-import pl.tomaszstankowski.fourplayerchess.engine.TranspositionTable.NodeType.LOWER_BOUND
-
+import pl.tomaszstankowski.fourplayerchess.engine.MoveBits
+import pl.tomaszstankowski.fourplayerchess.engine.NULL_MOVE
+import pl.tomaszstankowski.fourplayerchess.engine.allColors
+import pl.tomaszstankowski.fourplayerchess.engine.hypermax.TranspositionTable.NodeType.EXACT
+import pl.tomaszstankowski.fourplayerchess.engine.hypermax.TranspositionTable.NodeType.LOWER_BOUND
 
 internal class TranspositionTable {
     private val entries = Array(0x100000) {
         InternalEntry(
                 key = -1,
-                move = -1,
+                move = NULL_MOVE,
                 depth = -1,
                 gamePly = -1,
-                eval = -1,
+                eval = FloatArray(allColors.size),
                 nodeType = LOWER_BOUND
         )
     }
@@ -19,13 +21,12 @@ internal class TranspositionTable {
     object NodeType {
         const val EXACT: Byte = 0
         const val LOWER_BOUND: Byte = 1
-        const val UPPER_BOUND: Byte = 2
     }
 
     interface Entry {
         val move: MoveBits
         val depth: Byte
-        val eval: Int
+        val eval: FloatArray
         val nodeType: Byte
         val gamePly: Short
     }
@@ -33,14 +34,14 @@ internal class TranspositionTable {
     private class InternalEntry(var key: Long,
                                 override var move: MoveBits,
                                 override var depth: Byte,
-                                override var eval: Int,
+                                override var eval: FloatArray,
                                 override var nodeType: Byte,
                                 override var gamePly: Short) : Entry
 
     fun put(key: Long,
             move: MoveBits,
             depth: Byte,
-            eval: Int,
+            eval: FloatArray,
             nodeType: Byte,
             gamePly: Short) {
         val index = key.toInt() and 0xfffff
@@ -63,16 +64,5 @@ internal class TranspositionTable {
             return entry
         }
         return null
-    }
-
-    fun logState() {
-        var cnt = 0
-        for (i in 0 until entries.size) {
-            if (entries[i].gamePly > -1) {
-                cnt++
-            }
-        }
-        val ratio = cnt.toFloat() / entries.size * 100
-        println("TT entries in use: $cnt, ${ratio}%")
     }
 }

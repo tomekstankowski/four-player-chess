@@ -8,7 +8,8 @@ import java.util.*
 
 enum class SearchAlgorithm {
     Paranoid,
-    Random
+    Random,
+    Hypermax
 }
 
 data class CreateGameDto(val humanPlayersIds: Set<UUID>, val randomBotsCount: Int)

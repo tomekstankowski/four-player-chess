@@ -28,7 +28,7 @@ internal class RandomSearch(private val position: Position,
         )
         return PositionEvaluation(
                 pv = listOf(pvMove),
-                evaluation = 0
+                evaluation = 0f
         )
     }
 }

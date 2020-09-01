@@ -109,6 +109,7 @@ class GameControlService internal constructor(private val gameFactory: GameFacto
                     engineFactory = when (searchAlgorithm) {
                         SearchAlgorithm.Paranoid -> ParanoidSearchEngineFactory()
                         SearchAlgorithm.Random -> RandomSearchEngineFactory(random)
+                        SearchAlgorithm.Hypermax -> HypermaxEngineFactory()
                     }
             )
         }

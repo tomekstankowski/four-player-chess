@@ -1,5 +1,6 @@
 package pl.tomaszstankowski.fourplayerchess.engine
 
+import pl.tomaszstankowski.fourplayerchess.engine.hypermax.HyperMaxSearch
 import pl.tomaszstankowski.fourplayerchess.engine.paranoid.ParanoidSearch
 import pl.tomaszstankowski.fourplayerchess.engine.random.RandomSearch
 import java.util.concurrent.ExecutorService
@@ -25,6 +26,14 @@ class Engine internal constructor(
             return Engine(
                     position = position,
                     search = RandomSearch(position, random)
+            )
+        }
+
+        fun withHypermax(state: FenState, searchExecutorService: ExecutorService = Executors.newSingleThreadExecutor()): Engine {
+            val position = Position.fromFenState(state)
+            return Engine(
+                    position = position,
+                    search = HyperMaxSearch(position, searchExecutorService)
             )
         }
     }

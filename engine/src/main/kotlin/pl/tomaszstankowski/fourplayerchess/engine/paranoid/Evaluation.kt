@@ -6,7 +6,7 @@ import pl.tomaszstankowski.fourplayerchess.engine.Position
 import pl.tomaszstankowski.fourplayerchess.engine.allColors
 import pl.tomaszstankowski.fourplayerchess.engine.materialValue
 
-internal fun evaluatePosition(position: Position, evaluatedColor: Color): Int {
+internal fun evaluateParanoidPosition(position: Position, evaluatedColor: Color): Int {
     val material = evaluateMaterial(position, evaluatedColor)
     return material
 }

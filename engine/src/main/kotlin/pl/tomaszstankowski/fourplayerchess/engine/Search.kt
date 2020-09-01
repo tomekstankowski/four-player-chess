@@ -1,6 +1,6 @@
 package pl.tomaszstankowski.fourplayerchess.engine
 
-internal data class PositionEvaluation(val pv: List<PVMove>, val evaluation: Int) {
+internal data class PositionEvaluation(val pv: List<PVMove>, val evaluation: Float) {
 
     data class PVMove(val move: MoveBits, val moveText: String)
 }
