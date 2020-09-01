@@ -676,7 +676,7 @@ object MoveMakeTest : Spek({
         """.trimIndent())
     }
 
-    test("draw by threefold repetition") {
+    test("draw by claiming threefold repetition") {
         val engine = createEngineWithStateFromFen("""
             Y-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
             14/
@@ -707,6 +707,50 @@ object MoveMakeTest : Spek({
         engine.makeMoveWithAssert("m4", "m5")
         engine.makeMoveWithAssert("k7", "k4")
         engine.claimDraw()
+
+        val state = engine.getUIState()
+        state.isGameOver shouldBeEqualTo true
+        state.winningColor shouldBeEqualTo null
+    }
+
+    test("draw immediately by fivefold repetition") {
+        val engine = createEngineWithStateFromFen("""
+            Y-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
+            14/
+            14/
+            14/
+            14/
+            14/
+            10,yQ,3/
+            14/
+            8,yK,5/
+            14/
+            12,rQ,1/
+            13,rK/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.makeMoveWithAssert("k9", "k4")
+        engine.makeMoveWithAssert("m5", "m4")
+        engine.makeMoveWithAssert("k4", "n7")
+        engine.makeMoveWithAssert("m4", "n5")
+        engine.makeMoveWithAssert("n7", "k7")
+        engine.makeMoveWithAssert("n5", "m5")
+        engine.makeMoveWithAssert("k7", "k4")
+        engine.makeMoveWithAssert("m5", "m4")
+        engine.makeMoveWithAssert("k4", "k7")
+        engine.makeMoveWithAssert("m4", "m5")
+        engine.makeMoveWithAssert("k7", "k4")
+        engine.makeMoveWithAssert("m5", "m4")
+        engine.makeMoveWithAssert("k4", "k7")
+        engine.makeMoveWithAssert("m4", "m5")
+        engine.makeMoveWithAssert("k7", "k4")
+        engine.makeMoveWithAssert("m5", "m4")
+        engine.makeMoveWithAssert("k4", "k7")
+        engine.makeMoveWithAssert("m4", "m5")
+        engine.makeMoveWithAssert("k7", "k4")
 
         val state = engine.getUIState()
         state.isGameOver shouldBeEqualTo true
@@ -752,7 +796,7 @@ object MoveMakeTest : Spek({
         state.winningColor shouldBeEqualTo null
     }
 
-    test("draw by fifty move rule") {
+    test("draw by claiming fifty move rule") {
         val engine = createEngineWithStateFromFen("""
             Y-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-99-
             14/
@@ -773,6 +817,32 @@ object MoveMakeTest : Spek({
 
         engine.makeMoveWithAssert("j6", "k4")
         engine.claimDraw()
+
+        val state = engine.getUIState()
+        state.isGameOver shouldBeEqualTo true
+        state.winningColor shouldBeEqualTo null
+    }
+
+    test("draw immediately by seventy five move rule") {
+        val engine = createEngineWithStateFromFen("""
+            Y-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-149-
+            14/
+            14/
+            14/
+            9,yB,4/
+            14/
+            14/
+            14/
+            8,yK,5/
+            9,yN,4/
+            2,rR,11/
+            13,rK/
+            14/
+            14/
+            14
+        """.trimIndent())
+
+        engine.makeMoveWithAssert("j6", "k4")
 
         val state = engine.getUIState()
         state.isGameOver shouldBeEqualTo true
@@ -808,7 +878,7 @@ object MoveMakeTest : Spek({
         state.winningColor shouldBeEqualTo null
     }
 
-    test("draw not allowed unless threefold repetition or fifty move rule") {
+    test("draw claim not allowed unless threefold repetition or fifty move rule") {
         val engine = createEngineWithStateFromFen("""
             Y-0,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-39-
             14/

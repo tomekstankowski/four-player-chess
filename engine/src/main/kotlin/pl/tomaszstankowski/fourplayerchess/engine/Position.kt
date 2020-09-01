@@ -106,27 +106,35 @@ internal class Position(private val previousStates: LinkedList<State>,
     val isFiftyMoveRule: Boolean
         get() = state.plyCount > 99
 
+    val isSeventyFileRule: Boolean
+        get() = state.plyCount > 149
+
     val isThreeFoldRepetition: Boolean
-        get() {
-            var pliesRemaining = min(state.plyCount, previousStates.size)
-            val playingColorsCount = allColors.size - state.eliminatedColors.eliminatedColorsCount
-            if (pliesRemaining < playingColorsCount * 2 - 1) {
-                return false
-            }
-            val iterator = previousStates.descendingIterator()
-            var repCount = 0
-            while (pliesRemaining > 0) {
-                val prevState = iterator.next()
-                if (prevState.hash == state.hash) {
-                    repCount++
-                    if (repCount == 2) {
-                        return true
-                    }
-                }
-                pliesRemaining--
-            }
+        get() = isNFoldRepetition(3)
+
+    val isFiveFoldRepetition: Boolean
+        get() = isNFoldRepetition(5)
+
+    private fun isNFoldRepetition(n: Int): Boolean {
+        var pliesRemaining = min(state.plyCount, previousStates.size)
+        val playingColorsCount = allColors.size - state.eliminatedColors.eliminatedColorsCount
+        if (pliesRemaining < playingColorsCount * (n - 1) - 1) {
             return false
         }
+        val iterator = previousStates.descendingIterator()
+        var repCount = 0
+        while (pliesRemaining > 0) {
+            val prevState = iterator.next()
+            if (prevState.hash == state.hash) {
+                repCount++
+                if (repCount == n - 1) {
+                    return true
+                }
+            }
+            pliesRemaining--
+        }
+        return false
+    }
 
     private val isStaleMate: Boolean
         get() = allColors.size - state.eliminatedColors.eliminatedColorsCount == 2 && legalMoves.isEmpty()
@@ -135,7 +143,7 @@ internal class Position(private val previousStates: LinkedList<State>,
         get() = isFiftyMoveRule || isThreeFoldRepetition
 
     val isDraw: Boolean
-        get() = isMaterialInsufficient || isStaleMate
+        get() = isMaterialInsufficient || isStaleMate || isSeventyFileRule || isFiveFoldRepetition
 
     fun isEliminated(color: Color) = state.eliminatedColors.isEliminated(color)
 
