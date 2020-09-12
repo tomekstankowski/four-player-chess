@@ -92,7 +92,7 @@ internal class ParanoidSearch(private val position: Position,
             val iterationDurationMs = iterationEndTime - iterationStartTime
             val nodesPerSec: Float = nodeCnt.toFloat() / iterationDurationMs * 1000
             println("Depth $depth took $iterationDurationMs ms")
-            println("nodes: $nodeCnt, leaves: $leafCnt, nodes/s: $nodesPerSec")
+            println("nodes: $nodeCnt, leaves: $leafCnt, nodes/s: ${nodesPerSec.toInt()}")
         }
 
         val tt = transpositionTables[pos.nextMoveColor.ordinal]

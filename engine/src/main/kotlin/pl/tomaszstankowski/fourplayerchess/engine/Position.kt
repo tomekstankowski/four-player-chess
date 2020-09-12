@@ -40,6 +40,8 @@ internal class Position(private val previousStates: LinkedList<State>,
     }
     private val legalMoves: TIntArrayList = TIntArrayList()
 
+    private var isLegalMovesRegenerationNeeded = false
+
     init {
         for (i in 0 until BOARD_SIZE * BOARD_SIZE) {
             val square = this.board[i]
@@ -98,7 +100,14 @@ internal class Position(private val previousStates: LinkedList<State>,
         }
     }
 
-    fun getLegalMoves(): IntArray = legalMoves.toArray()
+    fun getLegalMoves(): IntArray {
+        if (isLegalMovesRegenerationNeeded) {
+            checkAttackVectors()
+            generateLegalMoves()
+            isLegalMovesRegenerationNeeded = false
+        }
+        return legalMoves.toArray()
+    }
 
     val hash: Long
         get() = state.hash
@@ -137,7 +146,7 @@ internal class Position(private val previousStates: LinkedList<State>,
     }
 
     private val isStaleMate: Boolean
-        get() = allColors.size - state.eliminatedColors.eliminatedColorsCount == 2 && legalMoves.isEmpty()
+        get() = allColors.size - state.eliminatedColors.eliminatedColorsCount == 2 && legalMoves.isEmpty
 
     val isDrawByClaimPossible: Boolean
         get() = isFiftyMoveRule || isThreeFoldRepetition
@@ -438,8 +447,7 @@ internal class Position(private val previousStates: LinkedList<State>,
             }
         }
         state = prevState
-        checkAttackVectors()
-        generateLegalMoves()
+        isLegalMovesRegenerationNeeded = true
         return true
     }
 
