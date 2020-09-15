@@ -534,7 +534,7 @@ object MoveMakeTest : Spek({
         val newState = engine.getStateAfterMove("h13", "j11")
 
         newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
-            B-1,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-1-
+            B-1,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
             14/
             5,yP,yK,7/
             6,yP,7/
@@ -574,7 +574,7 @@ object MoveMakeTest : Spek({
         val newState = engine.getStateAfterMove("h4", "h3")
 
         newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
-            B-1,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-5-
+            B-1,0,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
             14/
             5,yP,1,yB,6/
             6,yP,7/
@@ -658,7 +658,7 @@ object MoveMakeTest : Spek({
         newState.winningColor shouldBeEqualTo Yellow
 
         newState.fenState shouldBeEqualTo parseStateFromFenOrThrow("""
-            Y-1,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-6-
+            Y-1,1,0,1-0,0,0,0-0,0,0,0-0,0,0,0-0-
             14/
             14/
             14/

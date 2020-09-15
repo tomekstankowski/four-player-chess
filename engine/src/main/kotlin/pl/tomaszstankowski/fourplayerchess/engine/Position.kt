@@ -113,10 +113,10 @@ internal class Position(private val previousStates: LinkedList<State>,
         get() = state.hash
 
     val isFiftyMoveRule: Boolean
-        get() = state.plyCount > 99
+        get() = state.plyCount >= 50 * (allColors.size - state.eliminatedColors.eliminatedColorsCount)
 
     val isSeventyFileRule: Boolean
-        get() = state.plyCount > 149
+        get() = state.plyCount >= 75 * (allColors.size - state.eliminatedColors.eliminatedColorsCount)
 
     val isThreeFoldRepetition: Boolean
         get() = isNFoldRepetition(3)
@@ -479,7 +479,8 @@ internal class Position(private val previousStates: LinkedList<State>,
                 enPassantSquares = state.enPassantSquares.dropEnPassantSquareForColor(color),
                 hash = getNewHash(eliminatedColor = color),
                 lastMove = NULL_MOVE,
-                capturedPiece = null
+                capturedPiece = null,
+                plyCount = 0
         )
         val prevState = state
         state = pseudoState
@@ -499,7 +500,8 @@ internal class Position(private val previousStates: LinkedList<State>,
                         eliminatedColors = state.eliminatedColors.withColorEliminated(color),
                         enPassantSquares = state.enPassantSquares.dropEnPassantSquareForColor(color),
                         nextMoveColor = newNextMoveColor(color),
-                        hash = getNewHash(eliminatedColor = color)
+                        hash = getNewHash(eliminatedColor = color),
+                        plyCount = 0
                 )
                 findLegalState()
             }
