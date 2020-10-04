@@ -51,8 +51,6 @@ private fun evaluateMaterialOfColor(position: Position, color: Color): Int =
                 position.countPiecesBy(color, PieceType.Bishop) * PieceType.Bishop.materialValue +
                 position.countPiecesBy(color, PieceType.Rook) * PieceType.Rook.materialValue +
                 position.countPiecesBy(color, PieceType.Queen) * PieceType.Queen.materialValue +
-                // low value for king to prevent sacrificing pieces in order to capture lonely king (when not 1v1)
-                // but not 0 to encourage eliminating lonely kings
-                200
+                position.countPiecesBy(color, PieceType.King) * PieceType.King.materialValue
 
 private const val WIN_VALUE = 1000000f

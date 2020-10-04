@@ -47,8 +47,9 @@ internal class TranspositionTable {
             gamePly: Short) {
         val index = key.toInt() and 0xfffff
         val entry = entries[index]
-        if (gamePly > entry.gamePly
-                || ((entry.nodeType != EXACT || nodeType == EXACT) && depth > entry.depth)) {
+        if (gamePly > entry.gamePly + 40
+                || ((entry.nodeType != EXACT || nodeType == EXACT) && depth > entry.depth)
+                || (entry.nodeType != EXACT && nodeType == EXACT)) {
             entry.key = key
             entry.move = move
             entry.depth = depth

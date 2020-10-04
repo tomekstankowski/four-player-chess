@@ -1,12 +1,14 @@
 package pl.tomaszstankowski.fourplayerchess.game
 
 import pl.tomaszstankowski.fourplayerchess.engine.Move
+import pl.tomaszstankowski.fourplayerchess.engine.SearchTask
 import pl.tomaszstankowski.fourplayerchess.engine.UIState
 import pl.tomaszstankowski.fourplayerchess.game.Player.RandomBot
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.random.Random
 
 internal class BotMoveExecutor(private val executorService: ScheduledExecutorService,
@@ -17,14 +19,11 @@ internal class BotMoveExecutor(private val executorService: ScheduledExecutorSer
 
     fun executeBotMoveIfHasNextMove(randomBots: List<RandomBot>, gameId: UUID, uiState: UIState) {
         if (isNextMoveMadeByRandomBot(randomBots, uiState)) {
-            engineInstanceStore.synchronized(gameId) { engine ->
-                engine.search()
-            }
+            val searchTask = engineInstanceStore.synchronized(gameId) { engine -> engine.search() } ?: return
             executorService.schedule({
                 try {
-                    val (move, newState) = stopSearchAndPlayBestMove(gameId) ?: return@schedule
+                    val (move, newState) = stopSearchAndPlayBestMove(gameId, searchTask) ?: return@schedule
                     gameMessageBroker.sendMoveMadeMessage(gameId, GameStateDto.of(newState), move.toDto())
-                    Thread.sleep(100)
                     executeBotMoveIfHasNextMove(randomBots, gameId, newState)
                 } catch (e: Throwable) {
                     println("Something went wrong while making move")
@@ -37,23 +36,28 @@ internal class BotMoveExecutor(private val executorService: ScheduledExecutorSer
     private fun isNextMoveMadeByRandomBot(randomBots: List<RandomBot>, uiState: UIState): Boolean =
             !uiState.isGameOver && randomBots.any { it.color == uiState.fenState.nextMoveColor }
 
-    private fun stopSearchAndPlayBestMove(gameId: UUID): Pair<Move, UIState>? {
+    private fun stopSearchAndPlayBestMove(gameId: UUID, searchTask: SearchTask): Pair<Move, UIState>? {
         return engineInstanceStore.synchronized(gameId) { engine ->
             engine.stopSearching()
-            val stateEvaluation = engine.getStateEvaluation()
-            val bestMove = stateEvaluation?.principalVariation?.firstOrNull()
-                    ?.move
-                    ?: engine.getUIState().legalMoves.random(random = random)
-            if (stateEvaluation != null) {
-                val pv = stateEvaluation.principalVariation
-                val eval = stateEvaluation.value
-                val pvStr = pv.joinToString { (_, moveText) -> moveText }
-                println("Eval: ${"%.2f".format(eval)}, PV: $pvStr")
+            val currentState = engine.getUIState()
+            val isFinished = searchTask.await(1, SECONDS)
+            if (!isFinished) {
+                throw IllegalStateException("Engine did not finish searching")
             }
+            val searchResult = searchTask.depthSearchResults.lastOrNull()
+            if (searchResult != null) {
+                println("Last iteration of search for ${currentState.fenState.nextMoveColor}")
+                println()
+                searchResult.print()
+                println()
+            }
+            val bestMove = searchResult?.principalVariation?.firstOrNull()?.move
+                    ?: currentState.legalMoves.random(random = random)
             if (!engine.makeMove(bestMove)) {
                 throw IllegalStateException("Move $bestMove is illegal")
             }
-            return@synchronized bestMove to engine.getUIState()
+            val newState = engine.getUIState()
+            return@synchronized bestMove to newState
         }
     }
 }

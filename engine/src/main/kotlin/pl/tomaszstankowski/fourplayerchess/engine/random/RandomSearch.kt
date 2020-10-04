@@ -1,34 +1,38 @@
 package pl.tomaszstankowski.fourplayerchess.engine.random
 
-import pl.tomaszstankowski.fourplayerchess.engine.PGNFormatter
-import pl.tomaszstankowski.fourplayerchess.engine.Position
-import pl.tomaszstankowski.fourplayerchess.engine.PositionEvaluation
-import pl.tomaszstankowski.fourplayerchess.engine.Search
+import pl.tomaszstankowski.fourplayerchess.engine.*
+import java.time.Duration
 import kotlin.random.Random
 
 internal class RandomSearch(private val position: Position,
                             private val random: Random) : Search {
 
-    override fun startSearch() {
+    override fun startSearch(maxDepth: Int): SearchTask {
+        val legalMoves = position.getLegalMoves()
+        val pgnFormatter = PGNFormatter(position)
+        val pv: List<PVMove> = if (legalMoves.isEmpty()) {
+            emptyList()
+        } else {
+            val move = legalMoves.random(random)
+            val pvMove = PVMove(
+                    move = move,
+                    moveText = pgnFormatter.formatMove(move)
+            )
+            listOf(pvMove)
+        }
+        return SearchTask.finished(
+                SearchResult(
+                        principalVariation = pv.map { SearchResult.PVMove(it.move.toApiMove(), it.moveText) },
+                        evaluation = 0f,
+                        depth = 1,
+                        duration = Duration.ZERO,
+                        nodeCount = 1,
+                        leafCount = legalMoves.size
+                ),
+                error = null
+        )
     }
 
     override fun stopSearch() {
-    }
-
-    override fun getPositionEvaluation(): PositionEvaluation? {
-        val legalMoves = position.getLegalMoves()
-        val pgnFormatter = PGNFormatter(position)
-        if (legalMoves.isEmpty()) {
-            return null
-        }
-        val move = legalMoves.random(random)
-        val pvMove = PositionEvaluation.PVMove(
-                move = move,
-                moveText = pgnFormatter.formatMove(move)
-        )
-        return PositionEvaluation(
-                pv = listOf(pvMove),
-                evaluation = 0f
-        )
     }
 }

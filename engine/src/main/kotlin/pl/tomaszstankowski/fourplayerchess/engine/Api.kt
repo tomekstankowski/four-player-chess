@@ -7,6 +7,10 @@ import com.github.h0tk3y.betterParse.grammar.tryParseToEnd
 import com.github.h0tk3y.betterParse.parser.ErrorResult
 import com.github.h0tk3y.betterParse.parser.Parsed
 import com.github.h0tk3y.betterParse.parser.Parser
+import java.time.Duration
+import java.util.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 data class Coordinates internal constructor(val file: Int, val rank: Int) {
 
@@ -222,8 +226,113 @@ data class UIState(
         val legalMoves: Set<Move>
 )
 
-data class StateEvaluation(val principalVariation: List<PVMove>, val value: Float) {
+data class SearchResult(val principalVariation: List<PVMove>,
+                        val evaluation: Float,
+                        val depth: Int,
+                        val nodeCount: Int,
+                        val leafCount: Int,
+                        val duration: Duration) {
     data class PVMove(
             val move: Move,
-            val moveText: String)
+            val moveText: String
+    )
+
+    fun print() {
+        val durationMs = duration.toMillis()
+        val pvString = principalVariation.joinToString { it.moveText }
+        val nodesPerS = nodeCount / (durationMs / 1000f)
+        println("Depth: $depth")
+        println("Duration: ${durationMs}ms")
+        println("PV: $pvString")
+        println("Evaluation: $evaluation")
+        println("Nodes: $nodeCount")
+        println("Leaves: $leafCount")
+        println("Nodes/s: $nodesPerS")
+    }
 }
+
+class SearchTask private constructor(private val countDownLatch: CountDownLatch,
+                                     private var throwable: Throwable?,
+                                     private val results: MutableList<SearchResult>) {
+    private var onDepthReachedListener: OnDepthReachedListener? = null
+    private var onSearchFinishedListener: OnSearchFinishedListener? = null
+
+    val error: Throwable?
+        get() = throwable
+
+    val depthSearchResults: List<SearchResult>
+        get() = results
+
+    companion object {
+        fun finished(vararg depthSearchResults: SearchResult, error: Throwable?) = SearchTask(
+                countDownLatch = CountDownLatch(0),
+                results = mutableListOf(*depthSearchResults),
+                throwable = error
+        )
+
+        fun new() =
+                SearchTask(
+                        countDownLatch = CountDownLatch(1),
+                        results = Collections.synchronizedList(mutableListOf()),
+                        throwable = null
+                )
+    }
+
+    fun setOnDepthReachedListener(listener: OnDepthReachedListener) {
+        onDepthReachedListener = listener
+    }
+
+    fun removeOnDepthReachedListener() {
+        onDepthReachedListener = null
+    }
+
+    fun setOnSearchFinishedListener(listener: OnSearchFinishedListener) {
+        onSearchFinishedListener = listener
+    }
+
+    fun removeOnSearchFinishedListener() {
+        onSearchFinishedListener = null
+    }
+
+    fun await() {
+        countDownLatch.await()
+    }
+
+    fun await(timeout: Long, unit: TimeUnit): Boolean =
+            countDownLatch.await(timeout, unit)
+
+    fun await(duration: Duration) =
+            countDownLatch.await(duration.toMillis(), TimeUnit.MILLISECONDS)
+
+    val isFinished: Boolean
+        get() = countDownLatch.count == 0L
+
+    internal fun postSearchResult(result: SearchResult) {
+        results += result
+        onDepthReachedListener?.onDepthReached(result)
+    }
+
+    internal fun finish(error: Throwable? = null) {
+        this.throwable = error
+        if (error == null) {
+            onSearchFinishedListener?.onSearchFinishedSuccessfully()
+        } else {
+            onSearchFinishedListener?.onSearchFailed(error)
+        }
+        countDownLatch.countDown()
+    }
+
+    interface OnDepthReachedListener {
+
+        fun onDepthReached(result: SearchResult)
+    }
+
+    interface OnSearchFinishedListener {
+
+        fun onSearchFinishedSuccessfully()
+
+        fun onSearchFailed(error: Throwable)
+    }
+}
+
+data class TranspositionTableOptions(val isPositionEvaluationFetchAllowed: Boolean = true)

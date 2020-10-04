@@ -4,84 +4,68 @@ import pl.tomaszstankowski.fourplayerchess.engine.*
 import pl.tomaszstankowski.fourplayerchess.engine.paranoid.TranspositionTable.NodeType.EXACT
 import pl.tomaszstankowski.fourplayerchess.engine.paranoid.TranspositionTable.NodeType.LOWER_BOUND
 import pl.tomaszstankowski.fourplayerchess.engine.paranoid.TranspositionTable.NodeType.UPPER_BOUND
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.ExecutorService
 import kotlin.math.max
 import kotlin.math.min
 
 internal class ParanoidSearch(private val position: Position,
-                              private val executorService: ExecutorService) : Search {
+                              private val executorService: ExecutorService,
+                              private val ttOptions: TranspositionTableOptions) : Search {
     // Copy of original position used for search
     private lateinit var pos: Position
     private val transpositionTables = Array(Color.values().size) {
         TranspositionTable()
     }
     private val killerMoveTables = Array(Color.values().size) {
-        KillerMoveTable(MAX_DEPTH.toInt(), 3)
+        KillerMoveTable(MAX_DEPTH, 3)
     }
     private val historyTable = HistoryTable()
-    private lateinit var moveGenerator: MoveGenerator
-    private var gamePly: Short = 0
+    private val moveGenerators = Array(Color.values().size) { index ->
+        MoveGenerator(
+                tt = transpositionTables[index],
+                killerMoveTable = killerMoveTables[index],
+                historyTable = historyTable
+        )
+    }
+    private var gamePly = 0
     private var nodeCnt = 0
     private var leafCnt = 0
 
+    @Volatile
     private var isStopRequested = false
-
-    override fun getPositionEvaluation(): PositionEvaluation? {
-        val tmpPos = position.copy()
-        val pgnFormatter = PGNFormatter(tmpPos)
-        val pv = LinkedList<PositionEvaluation.PVMove>()
-        val tt = transpositionTables[tmpPos.nextMoveColor.ordinal]
-        // to avoid cycle
-        val pvHashes = LinkedList<Long>()
-        val rootEntry = tt.get(tmpPos.hash) ?: return null
-        var currEntry: TranspositionTable.Entry = rootEntry
-        do {
-            pvHashes.add(tmpPos.hash)
-            val move = currEntry.move
-            val pvMove = PositionEvaluation.PVMove(move, moveText = pgnFormatter.formatMove(move))
-            pv.add(pvMove)
-            tmpPos.makeMove(move)
-            currEntry = tt.get(tmpPos.hash)
-                    ?.takeIf { e -> e.nodeType == EXACT }
-                    ?: break
-        } while (tmpPos.hash !in pvHashes)
-        return PositionEvaluation(pv, rootEntry.eval / 100f)
-    }
 
     override fun stopSearch() {
         isStopRequested = true
     }
 
-    override fun startSearch() {
+    override fun startSearch(maxDepth: Int): SearchTask {
         isStopRequested = false
         pos = position.copy()
+        gamePly = position.gamePly
+        val task = SearchTask.new()
         executorService.submit {
             try {
-                search()
+                iterativeDeepening(min(MAX_DEPTH, maxDepth), task)
+                task.finish()
             } catch (e: Throwable) {
-                println("Search failed")
-                e.printStackTrace()
+                task.finish(e)
             }
         }
+        return task
     }
 
-    private fun search() {
-        moveGenerator = MoveGenerator(
-                transpositionTables[pos.nextMoveColor.ordinal],
-                killerMoveTables[pos.nextMoveColor.ordinal],
-                historyTable
-        )
-        println("Evaluation for ${pos.nextMoveColor}")
-        for (depth in 1..MAX_DEPTH) {
+    private fun iterativeDeepening(maxDepth: Int, task: SearchTask) {
+        for (depth in 1..maxDepth) {
             val iterationStartTime = System.currentTimeMillis()
             leafCnt = 0
             nodeCnt = 0
-            alphaBeta(
+            val eval = alphaBeta(
                     maxColor = pos.nextMoveColor,
                     alpha = Int.MIN_VALUE,
                     beta = Int.MAX_VALUE,
-                    depth = depth.toByte(),
+                    depth = depth,
                     isMax = true,
                     plyFromRoot = 0
             )
@@ -90,23 +74,22 @@ internal class ParanoidSearch(private val position: Position,
             }
             val iterationEndTime = System.currentTimeMillis()
             val iterationDurationMs = iterationEndTime - iterationStartTime
-            val nodesPerSec: Float = nodeCnt.toFloat() / iterationDurationMs * 1000
-            println("Depth $depth took $iterationDurationMs ms")
-            println("nodes: $nodeCnt, leaves: $leafCnt, nodes/s: ${nodesPerSec.toInt()}")
+            val searchResult = SearchResult(
+                    principalVariation = collectPV(depth).map { SearchResult.PVMove(it.move.toApiMove(), it.moveText) },
+                    evaluation = eval / 100f,
+                    depth = depth,
+                    duration = Duration.ofMillis(iterationDurationMs),
+                    nodeCount = nodeCnt,
+                    leafCount = leafCnt
+            )
+            task.postSearchResult(searchResult)
         }
-
-        val tt = transpositionTables[pos.nextMoveColor.ordinal]
-        tt.logState()
-
-        println()
-
-        gamePly++
     }
 
     private fun alphaBeta(maxColor: Color,
                           alpha: Int,
                           beta: Int,
-                          depth: Byte,
+                          depth: Int,
                           isMax: Boolean,
                           plyFromRoot: Int): Int {
         if (isStopRequested) {
@@ -121,44 +104,47 @@ internal class ParanoidSearch(private val position: Position,
             leafCnt++
             return WIN_VALUE
         }
-        if (pos.isDrawByClaimPossible || pos.isDraw) {
+        if ((pos.isDrawByClaimPossible && plyFromRoot > 0) || pos.isDraw) {
             leafCnt++
             return DRAW_VALUE
         }
-        if (depth == 0.toByte()) {
+        if (depth == 0) {
             leafCnt++
             return evaluateParanoidPosition(pos, maxColor)
         }
         var newAlpha = alpha
         var newBeta = beta
         val tt = transpositionTables[maxColor.ordinal]
-        val ttEntry = tt.get(pos.hash)
-        if (ttEntry != null && ttEntry.depth >= depth) {
-            if (ttEntry.nodeType == EXACT) {
-                return ttEntry.eval
-            } else if (ttEntry.nodeType == LOWER_BOUND) {
-                if (ttEntry.eval > alpha) {
-                    newAlpha = ttEntry.eval
+
+        if (ttOptions.isPositionEvaluationFetchAllowed) {
+            val ttEntry = tt.get(pos.hash)
+            if (ttEntry != null && ttEntry.depth >= depth) {
+                if (ttEntry.nodeType == EXACT) {
+                    return ttEntry.eval
+                } else if (ttEntry.nodeType == LOWER_BOUND) {
+                    if (ttEntry.eval > alpha) {
+                        newAlpha = ttEntry.eval
+                    }
+                } else if (ttEntry.nodeType == UPPER_BOUND) {
+                    if (ttEntry.eval < beta) {
+                        newBeta = ttEntry.eval
+                    }
                 }
-            } else if (ttEntry.nodeType == UPPER_BOUND) {
-                if (ttEntry.eval < beta) {
-                    newBeta = ttEntry.eval
+                if (newAlpha >= newBeta) {
+                    return newAlpha
                 }
-            }
-            if (newAlpha >= newBeta) {
-                return newAlpha
             }
         }
         var bestScore: Int
         var bestMove: MoveBits = NULL_MOVE
-        val moves = moveGenerator.generateMoves(pos, plyFromRoot)
+        val moves = moveGenerators[maxColor.ordinal].generateMoves(pos, plyFromRoot)
         val killerMoveTable = killerMoveTables[maxColor.ordinal]
         if (isMax) {
             bestScore = Int.MIN_VALUE
             var a = newAlpha
             for ((move) in moves) {
                 pos.makeMove(move)
-                val score = alphaBeta(maxColor, a, newBeta, depth.dec(), !isMax, plyFromRoot + 1)
+                val score = alphaBeta(maxColor, a, newBeta, depth - 1, !isMax, plyFromRoot + 1)
                 pos.unmakeMove()
                 if (score > bestScore) {
                     bestScore = score
@@ -179,7 +165,7 @@ internal class ParanoidSearch(private val position: Position,
             for ((move) in moves) {
                 pos.makeMove(move)
                 val newIsMax = pos.nextMoveColor == maxColor
-                val score = alphaBeta(maxColor, newAlpha, b, depth.dec(), newIsMax, plyFromRoot + 1)
+                val score = alphaBeta(maxColor, newAlpha, b, depth - 1, newIsMax, plyFromRoot + 1)
                 pos.unmakeMove()
                 if (score < bestScore) {
                     bestScore = score
@@ -204,13 +190,35 @@ internal class ParanoidSearch(private val position: Position,
             tt.put(
                     key = pos.hash,
                     eval = bestScore,
-                    gamePly = gamePly,
+                    gamePly = gamePly.toShort(),
                     nodeType = nodeType,
-                    depth = depth,
+                    depth = depth.toByte(),
                     move = bestMove
             )
         }
         return bestScore
+    }
+
+    private fun collectPV(depth: Int): List<PVMove> {
+        val tmpPos = pos.copy()
+        val pgnFormatter = PGNFormatter(tmpPos)
+        val pv = LinkedList<PVMove>()
+        val tt = transpositionTables[tmpPos.nextMoveColor.ordinal]
+        // to avoid cycle
+        val pvHashes = LinkedList<Long>()
+        val rootEntry = tt.get(tmpPos.hash) ?: return emptyList()
+        var currEntry: TranspositionTable.Entry = rootEntry
+        do {
+            pvHashes.add(tmpPos.hash)
+            val move = currEntry.move
+            val pvMove = PVMove(move, moveText = pgnFormatter.formatMove(move))
+            pv.add(pvMove)
+            tmpPos.makeMove(move)
+            currEntry = tt.get(tmpPos.hash)
+                    ?.takeIf { e -> e.nodeType == EXACT }
+                    ?: break
+        } while (tmpPos.hash !in pvHashes && pv.size < depth)
+        return pv
     }
 
 }
@@ -218,4 +226,4 @@ internal class ParanoidSearch(private val position: Position,
 private const val DRAW_VALUE = 0
 private const val WIN_VALUE = 10000000
 private const val LOSE_VALUE = -10000000
-private const val MAX_DEPTH: Byte = 20
+private const val MAX_DEPTH: Int = 30

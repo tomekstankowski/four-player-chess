@@ -224,3 +224,5 @@ enum class PromotionPieceType {
                 Knight -> PieceType.Knight
             }
 }
+
+internal data class PVMove(val move: MoveBits, val moveText: String)

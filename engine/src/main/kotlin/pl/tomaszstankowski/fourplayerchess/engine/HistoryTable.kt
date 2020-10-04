@@ -7,7 +7,7 @@ internal class HistoryTable {
         }
     }
 
-    fun increase(move: MoveBits, color: Color, depth: Byte) {
+    fun increase(move: MoveBits, color: Color, depth: Int) {
         table[color.ordinal][move.from][move.to] += depth * depth
     }
 

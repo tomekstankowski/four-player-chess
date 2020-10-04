@@ -4,7 +4,7 @@ import pl.tomaszstankowski.fourplayerchess.engine.MoveBits
 import pl.tomaszstankowski.fourplayerchess.engine.NULL_MOVE
 import pl.tomaszstankowski.fourplayerchess.engine.allColors
 import pl.tomaszstankowski.fourplayerchess.engine.hypermax.TranspositionTable.NodeType.EXACT
-import pl.tomaszstankowski.fourplayerchess.engine.hypermax.TranspositionTable.NodeType.LOWER_BOUND
+import pl.tomaszstankowski.fourplayerchess.engine.hypermax.TranspositionTable.NodeType.UPPER_BOUND
 
 internal class TranspositionTable {
     private val entries = Array(0x100000) {
@@ -14,13 +14,14 @@ internal class TranspositionTable {
                 depth = -1,
                 gamePly = -1,
                 eval = FloatArray(allColors.size),
-                nodeType = LOWER_BOUND
+                nodeType = UPPER_BOUND
         )
     }
 
     object NodeType {
         const val EXACT: Byte = 0
-        const val LOWER_BOUND: Byte = 1
+        const val UPPER_BOUND: Byte = 1
+        const val LOWER_BOUND: Byte = 2
     }
 
     interface Entry {
@@ -46,8 +47,9 @@ internal class TranspositionTable {
             gamePly: Short) {
         val index = key.toInt() and 0xfffff
         val entry = entries[index]
-        if (gamePly > entry.gamePly
-                || ((entry.nodeType != EXACT || nodeType == EXACT) && depth > entry.depth)) {
+        if (gamePly > entry.gamePly + 40
+                || ((entry.nodeType != EXACT || nodeType == EXACT) && depth > entry.depth)
+                || (entry.nodeType != EXACT && nodeType == EXACT)) {
             entry.key = key
             entry.move = move
             entry.depth = depth

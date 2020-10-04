@@ -23,8 +23,8 @@ internal class MoveGenerator(private val tt: TranspositionTable,
         const val EQUAL_CAPTURE = 700_000
         const val PROMOTION = 600_000
         const val KILLER_MOVE = 500_000
-        const val QUIET_MOVE = 200_000
-        const val LOSING_CAPTURE = 100_000
+        const val QUIET_MOVE = 100_000
+        const val LOSING_CAPTURE = 400_000
     }
 
     fun generateMoves(position: Position, plyFromRoot: Int): List<ScoredMove> =

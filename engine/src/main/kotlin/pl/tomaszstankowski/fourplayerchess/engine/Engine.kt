@@ -12,12 +12,15 @@ class Engine internal constructor(
         private val search: Search) {
 
     companion object {
+        private val defaultTTOptions = TranspositionTableOptions()
+
         fun withParanoidSearch(state: FenState,
-                               searchExecutorService: ExecutorService = Executors.newSingleThreadExecutor()): Engine {
+                               searchExecutorService: ExecutorService = Executors.newSingleThreadExecutor(),
+                               transpositionTableOptions: TranspositionTableOptions = defaultTTOptions): Engine {
             val position = Position.fromFenState(state)
             return Engine(
                     position = position,
-                    search = ParanoidSearch(position, searchExecutorService)
+                    search = ParanoidSearch(position, searchExecutorService, transpositionTableOptions)
             )
         }
 
@@ -29,11 +32,13 @@ class Engine internal constructor(
             )
         }
 
-        fun withHypermax(state: FenState, searchExecutorService: ExecutorService = Executors.newSingleThreadExecutor()): Engine {
+        fun withHypermax(state: FenState,
+                         searchExecutorService: ExecutorService = Executors.newSingleThreadExecutor(),
+                         transpositionTableOptions: TranspositionTableOptions = defaultTTOptions): Engine {
             val position = Position.fromFenState(state)
             return Engine(
                     position = position,
-                    search = HyperMaxSearch(position, searchExecutorService)
+                    search = HyperMaxSearch(position, searchExecutorService, transpositionTableOptions)
             )
         }
     }
@@ -99,26 +104,14 @@ class Engine internal constructor(
         return position.unmakeMove()
     }
 
-    fun search() {
+    fun search(maxDepth: Int = 20): SearchTask? {
         if (isGameOver) {
-            return
+            return null
         }
-        search.startSearch()
+        return search.startSearch(maxDepth)
     }
 
     fun stopSearching() {
         search.stopSearch()
     }
-
-    fun getStateEvaluation(): StateEvaluation? =
-            search.getPositionEvaluation()
-                    ?.toStateEvaluation()
-
-    private fun PositionEvaluation.toStateEvaluation() =
-            StateEvaluation(
-                    principalVariation = pv.map { (move, moveText) ->
-                        StateEvaluation.PVMove(move.toApiMove(), moveText)
-                    },
-                    value = evaluation
-            )
 }

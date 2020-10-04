@@ -112,11 +112,17 @@ internal class Position(private val previousStates: LinkedList<State>,
     val hash: Long
         get() = state.hash
 
+    val gamePly: Int
+        get() = previousStates.size
+
     val isFiftyMoveRule: Boolean
         get() = state.plyCount >= 50 * (allColors.size - state.eliminatedColors.eliminatedColorsCount)
 
     val isSeventyFileRule: Boolean
         get() = state.plyCount >= 75 * (allColors.size - state.eliminatedColors.eliminatedColorsCount)
+
+    val isRepeated: Boolean
+        get() = isNFoldRepetition(2)
 
     val isThreeFoldRepetition: Boolean
         get() = isNFoldRepetition(3)
