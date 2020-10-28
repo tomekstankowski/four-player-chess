@@ -33,7 +33,10 @@ internal class MoveGenerator(private val tt: TranspositionTable,
                         val score = getScore(move, position, plyFromRoot)
                         ScoredMove(move, score)
                     }
-                    .sortedByDescending { it.score }
+                    .toMutableList().apply {
+                        shuffle()
+                        sortByDescending { it.score }
+                    }
 
     private fun getScore(move: MoveBits, pos: Position, plyFromRoot: Int): Int {
         val ttEntry = tt.get(pos.hash)
