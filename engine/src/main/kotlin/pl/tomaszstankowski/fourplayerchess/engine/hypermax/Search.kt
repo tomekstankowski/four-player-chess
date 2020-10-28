@@ -12,7 +12,7 @@ import kotlin.math.min
 internal class HyperMaxSearch(private val position: Position,
                               private val searchExecutorService: ExecutorService,
                               private val ttOptions: TranspositionTableOptions) : Search {
-    private lateinit var pos: Position
+    private lateinit var searchPos: Position
     private val tt = TranspositionTable()
     private val killerMoveTable = KillerMoveTable(maxPly = MAX_DEPTH, killerMovesPerPly = 3)
     private val historyTable = HistoryTable()
@@ -28,7 +28,7 @@ internal class HyperMaxSearch(private val position: Position,
     }
 
     override fun startSearch(maxDepth: Int): SearchTask {
-        pos = position.copy()
+        searchPos = position.copy()
         gamePly = position.gamePly
         isStopRequested = false
         val task = SearchTask.new()
@@ -66,7 +66,7 @@ internal class HyperMaxSearch(private val position: Position,
             val iterationDurationMs = iterationEndTime - iterationStartTime
             val searchResult = SearchResult(
                     principalVariation = collectPV(depth).map { SearchResult.PVMove(it.move.toApiMove(), it.moveText) },
-                    evaluation = eval[pos.nextMoveColor.ordinal] / 100f,
+                    evaluation = eval[searchPos.nextMoveColor.ordinal] / 100f,
                     depth = depth,
                     duration = Duration.ofMillis(iterationDurationMs),
                     nodeCount = nodeCount,
@@ -77,37 +77,40 @@ internal class HyperMaxSearch(private val position: Position,
     }
 
     private fun hypermax(depth: Int, plyFromRoot: Int): FloatArray {
-        nodeCount++
         if (isStopRequested) {
             return EQUAL_EVAL
         }
-        if (depth == 0 || pos.winner != null || (pos.isDrawByClaimPossible && plyFromRoot > 0) || pos.isDraw) {
+        nodeCount++
+        if (searchPos.winner != null || ((searchPos.isRepeated || searchPos.isDrawByClaimPossible) && plyFromRoot > 0) || searchPos.isDraw) {
             leafCount++
-            return evaluateHyperMaxPosition(pos)
+            return evaluateTerminalPosition(searchPos)
         }
-        val color = pos.nextMoveColor
+        if (depth == 0) {
+            leafCount++
+            return evaluateIntermediatePosition(searchPos)
+        }
+        val color = searchPos.nextMoveColor
         val a = alpha[plyFromRoot]
         val originAlpha = a[color.ordinal]
         if (ttOptions.isPositionEvaluationFetchAllowed) {
-            val ttEntry = tt.get(pos.hash)
+            val ttEntry = tt.get(searchPos.hash)
             if (ttEntry != null && ttEntry.depth >= depth) {
                 if (ttEntry.nodeType == EXACT) {
                     return ttEntry.eval
                 }
             }
         }
-        val moves = moveGenerator.generateMoves(pos, plyFromRoot)
+        val moves = moveGenerator.generateMoves(searchPos, plyFromRoot)
         // initialize only to avoid compilation error
         var bestScores: FloatArray = INITIAL_SCORES
         var bestMove = NULL_MOVE
         var isCut = false
-        for (i in moves.indices) {
-            val (move) = moves[i]
-            pos.makeMove(move)
+        for ((move) in moves) {
+            searchPos.makeMove(move)
             // reduce unnecessary allocations
             System.arraycopy(a, 0, alpha[plyFromRoot + 1], 0, allColors.size)
             val scores = hypermax(depth - 1, plyFromRoot + 1)
-            pos.unmakeMove()
+            searchPos.unmakeMove()
             if (bestScores[color.ordinal] < scores[color.ordinal]) {
                 bestScores = scores
                 bestMove = move
@@ -115,7 +118,14 @@ internal class HyperMaxSearch(private val position: Position,
             if (a[color.ordinal] < scores[color.ordinal]) {
                 a[color.ordinal] = scores[color.ordinal]
             }
-            if (a.sum() >= 0f) {
+            val alphaSum = a.foldIndexed(0f) { i, sum, value ->
+                if (searchPos.isEliminated(allColors[i])) {
+                    sum
+                } else {
+                    sum + value
+                }
+            }
+            if (alphaSum >= 0f) {
                 historyTable.increase(move, color, depth)
                 killerMoveTable.addKillerMove(move, plyFromRoot)
                 isCut = true
@@ -129,7 +139,7 @@ internal class HyperMaxSearch(private val position: Position,
                 else -> UPPER_BOUND
             }
             tt.put(
-                    key = pos.hash,
+                    key = searchPos.hash,
                     move = bestMove,
                     nodeType = nodeType,
                     eval = bestScores,

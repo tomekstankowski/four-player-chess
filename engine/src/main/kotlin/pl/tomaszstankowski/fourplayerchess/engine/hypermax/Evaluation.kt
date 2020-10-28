@@ -2,43 +2,45 @@ package pl.tomaszstankowski.fourplayerchess.engine.hypermax
 
 import pl.tomaszstankowski.fourplayerchess.engine.*
 
-internal fun evaluateHyperMaxPosition(position: Position): FloatArray {
-    val scores = FloatArray(allColors.size)
-
-    if (position.isDraw || position.isDrawByClaimPossible) {
-        val eliminatedPlayersCount = allColors.count { color -> position.isEliminated(color) }
-
-        allColors.forEach { color ->
-            if (position.isEliminated(color)) {
-                scores[color.ordinal] = WIN_VALUE * -1f / eliminatedPlayersCount
-            } else {
-                scores[color.ordinal] = WIN_VALUE / (allColors.size - eliminatedPlayersCount)
+internal fun evaluateTerminalPosition(position: Position): FloatArray =
+        if (position.winner == null) {
+            FloatArray(allColors.size) { i ->
+                if (position.isEliminated(allColors[i]))
+                    WIN_VALUE * -1
+                else
+                    0f
+            }
+        } else {
+            FloatArray(allColors.size) { i ->
+                if (position.winner == allColors[i])
+                    WIN_VALUE
+                else
+                    WIN_VALUE * -1
             }
         }
-    } else if (position.winner != null) {
-        allColors.forEach { color ->
-            if (color == position.winner) {
-                scores[color.ordinal] = WIN_VALUE
-            } else {
-                scores[color.ordinal] = WIN_VALUE * -1f / (allColors.size - 1)
-            }
+
+internal fun evaluateIntermediatePosition(position: Position): FloatArray {
+    val scores = FloatArray(allColors.size) { i ->
+        if (position.isEliminated(allColors[i])) {
+            WIN_VALUE * -1
+        } else {
+            0f
         }
-    } else {
-        evaluateMaterial(position, scores)
     }
-
+    evaluateMaterial(position, scores)
     return scores
 }
 
 private fun evaluateMaterial(position: Position, scores: FloatArray) {
-    allColors.forEach { color ->
-        if (!position.isEliminated(color)) {
-            val materialOfColor = evaluateMaterialOfColor(position, color)
+    val playersInGameCount = allColors.count { color -> !position.isEliminated(color) }
+    allColors.forEach { evaluatedColor ->
+        if (!position.isEliminated(evaluatedColor)) {
+            val materialOfColor = evaluateMaterialOfColor(position, evaluatedColor)
             allColors.forEach { scoredColor ->
-                if (scoredColor == color) {
+                if (scoredColor == evaluatedColor) {
                     scores[scoredColor.ordinal] += materialOfColor.toFloat()
-                } else {
-                    scores[scoredColor.ordinal] += materialOfColor * -1f / (allColors.size - 1)
+                } else if (!position.isEliminated(scoredColor)) {
+                    scores[scoredColor.ordinal] += materialOfColor * -1f / (playersInGameCount - 1)
                 }
             }
         }
