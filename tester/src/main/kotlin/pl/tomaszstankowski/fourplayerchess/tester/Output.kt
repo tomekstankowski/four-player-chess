@@ -6,14 +6,42 @@ import pl.tomaszstankowski.fourplayerchess.engine.SearchTask
 import pl.tomaszstankowski.fourplayerchess.engine.UIState
 import java.io.BufferedWriter
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
 
 enum class OutputFileType {
     Result,
     Data
 }
 
-fun createOutputFile(experiment: Experiment, assignment: AlgorithmAssignment, gameNr: Int, fileType: OutputFileType): BufferedWriter {
+private fun getExperimentDir(experiment: Experiment): Path {
+    val mainDir = Paths.get("resultsdebug")
+    if (!Files.exists(mainDir)) {
+        Files.createDirectory(mainDir)
+    }
+    val experimentDirName = when (experiment) {
+        Experiment.NoLimits -> "no_limits"
+        Experiment.FixedDepth -> "fixed_depth"
+        Experiment.Random -> "random"
+    }
+    val experimentDir = mainDir.resolve(experimentDirName)
+    if (!Files.exists(experimentDir)) {
+        Files.createDirectory(experimentDir)
+    }
+    return experimentDir
+}
+
+fun getErrorOutputWriter(experiment: Experiment): BufferedWriter {
+    val experimentDir = getExperimentDir(experiment)
+    val file = experimentDir.resolve("errors.txt")
+    if (!Files.exists(file)) {
+        Files.createFile(file)
+    }
+    return Files.newBufferedWriter(file, StandardOpenOption.APPEND)
+}
+
+fun createOutputFileIfNotExists(experiment: Experiment, assignment: AlgorithmAssignment, gameNr: Int, fileType: OutputFileType): BufferedWriter? {
     val typePrefix = when (fileType) {
         OutputFileType.Result -> "result"
         OutputFileType.Data -> "data"
@@ -29,22 +57,12 @@ fun createOutputFile(experiment: Experiment, assignment: AlgorithmAssignment, ga
     filenameBuilder.append(".csv")
     val filename = filenameBuilder.toString()
 
-    val mainDir = Paths.get("results")
-    if (!Files.exists(mainDir)) {
-        Files.createDirectory(mainDir)
-    }
-
-    val experimentDirName = when (experiment) {
-        Experiment.NoLimits -> "no_limits"
-        Experiment.FixedDepth -> "fixed_depth"
-        Experiment.Random -> "random"
-    }
-    val experimentDir = mainDir.resolve(experimentDirName)
-    if (!Files.exists(experimentDir)) {
-        Files.createDirectory(experimentDir)
-    }
+    val experimentDir = getExperimentDir(experiment)
 
     val file = experimentDir.resolve(filename)
+    if (Files.exists(file)) {
+        return null
+    }
     Files.createFile(file)
     return Files.newBufferedWriter(file)
 }

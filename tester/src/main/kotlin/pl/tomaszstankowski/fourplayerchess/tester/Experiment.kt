@@ -4,6 +4,7 @@ import pl.tomaszstankowski.fourplayerchess.engine.Color
 import pl.tomaszstankowski.fourplayerchess.engine.Engine
 import pl.tomaszstankowski.fourplayerchess.engine.FenState
 import pl.tomaszstankowski.fourplayerchess.engine.TranspositionTableOptions
+import java.io.PrintWriter
 import java.time.Duration
 
 enum class Experiment {
@@ -23,6 +24,10 @@ data class AlgorithmAssignment(val red: Algorithm,
 
     override fun iterator(): Iterator<Algorithm> =
             listOf(red, blue, yellow, green).listIterator()
+
+    override fun toString(): String {
+        return "($red,$blue,$yellow,$green)"
+    }
 
 }
 
@@ -50,15 +55,15 @@ private val Experiment.algorithmAssignments: List<AlgorithmAssignment>
             )
         Experiment.Random ->
             listOf(
-                    AlgorithmAssignment(Algorithm.Paranoid, Algorithm.Random, Algorithm.Random, Algorithm.Random),
-                    AlgorithmAssignment(Algorithm.Random, Algorithm.Paranoid, Algorithm.Random, Algorithm.Random),
-                    AlgorithmAssignment(Algorithm.Random, Algorithm.Random, Algorithm.Paranoid, Algorithm.Random),
-                    AlgorithmAssignment(Algorithm.Random, Algorithm.Random, Algorithm.Random, Algorithm.Paranoid),
-
                     AlgorithmAssignment(Algorithm.Hypermax, Algorithm.Random, Algorithm.Random, Algorithm.Random),
                     AlgorithmAssignment(Algorithm.Random, Algorithm.Hypermax, Algorithm.Random, Algorithm.Random),
                     AlgorithmAssignment(Algorithm.Random, Algorithm.Random, Algorithm.Hypermax, Algorithm.Random),
-                    AlgorithmAssignment(Algorithm.Random, Algorithm.Random, Algorithm.Random, Algorithm.Hypermax)
+                    AlgorithmAssignment(Algorithm.Random, Algorithm.Random, Algorithm.Random, Algorithm.Hypermax),
+
+                    AlgorithmAssignment(Algorithm.Paranoid, Algorithm.Random, Algorithm.Random, Algorithm.Random),
+                    AlgorithmAssignment(Algorithm.Random, Algorithm.Paranoid, Algorithm.Random, Algorithm.Random),
+                    AlgorithmAssignment(Algorithm.Random, Algorithm.Random, Algorithm.Paranoid, Algorithm.Random),
+                    AlgorithmAssignment(Algorithm.Random, Algorithm.Random, Algorithm.Random, Algorithm.Paranoid)
             )
     }
 
@@ -68,6 +73,8 @@ fun doExperiment(experiment: Experiment,
                  numberOfGamesPerAssignment: Int,
                  searchDuration: Duration,
                  searchDepth: Int) {
+    val errorWriter = getErrorOutputWriter(experiment)
+    val errorPrinter = PrintWriter(errorWriter)
     experiment.algorithmAssignments.forEach { assignment ->
         for (i in 1..numberOfGamesPerAssignment) {
             try {
@@ -83,10 +90,13 @@ fun doExperiment(experiment: Experiment,
                         }
                 )
             } catch (e: Throwable) {
-                e.printStackTrace()
+                errorPrinter.println("Error occurred for assignment $assignment and game $i")
+                e.printStackTrace(errorPrinter)
+                errorPrinter.flush()
             }
         }
     }
+    errorPrinter.close()
 }
 
 private fun playGame(experiment: Experiment,
@@ -95,7 +105,16 @@ private fun playGame(experiment: Experiment,
                      maxDepth: Int,
                      searchDuration: Duration,
                      ttOptions: TranspositionTableOptions) {
-    val writer = createOutputFile(experiment, assignment, gameNr, fileType = OutputFileType.Data)
+    val dataWriter = createOutputFileIfNotExists(experiment, assignment, gameNr, fileType = OutputFileType.Data)
+    if (dataWriter == null) {
+        println("Data file already exists for assignment $assignment and game $gameNr, skipping")
+        return
+    }
+    val resultWriter = createOutputFileIfNotExists(experiment, assignment, gameNr, fileType = OutputFileType.Result)
+    if (resultWriter == null) {
+        println("Result file already exists for assignment $assignment and game $gameNr, skipping")
+        return
+    }
     val engines = assignment.map { algorithm ->
         when (algorithm) {
             Algorithm.Paranoid -> Engine.withParanoidSearch(startingState, transpositionTableOptions = ttOptions)
@@ -127,13 +146,11 @@ private fun playGame(experiment: Experiment,
                 throw IllegalStateException("Move not made")
             }
         }
-        writer.writeSearchResult(searchResult, nextMoveColor)
+        dataWriter.writeSearchResult(searchResult, nextMoveColor)
         val state = engine.getUIState()
         eliminatedColors.addAll(state.fenState.eliminatedColors)
         if (state.isGameOver) {
-            createOutputFile(experiment, assignment, gameNr, fileType = OutputFileType.Result)
-                    .writeGameResult(state, eliminatedColors)
-                    .close()
+            resultWriter.writeGameResult(state, eliminatedColors).close()
             break
         }
         nextMoveColor = state.fenState.nextMoveColor

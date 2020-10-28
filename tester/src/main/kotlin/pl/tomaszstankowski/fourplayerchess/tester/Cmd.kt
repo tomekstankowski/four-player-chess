@@ -75,7 +75,7 @@ fun parseArguments(args: Array<String>): ExperimentArgs {
             ?.takeIf { it > 0 }
             ?: throw  ParseException("Invalid ${secondsPerMoveOption.longOpt} value")
     val searchDepth = cmd
-            .getOptionValue(secondsPerMoveOption.opt, DEFAULT_DEPTH.toString())
+            .getOptionValue(depthOption.opt, DEFAULT_DEPTH.toString())
             .toIntOrNull()
             ?.takeIf { it in 1..29 }
             ?: throw ParseException("Invalid ${secondsPerMoveOption.opt} value")
